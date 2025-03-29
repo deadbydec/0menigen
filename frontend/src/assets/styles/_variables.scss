@@ -1,0 +1,29 @@
+// 🎨 Цвета
+$primary-color: #42b983; // Основной акцент
+$secondary-color: #369b75; // Вторичный акцент
+$background-color: #1e1e1e; // Фон страницы
+$text-color: #ffffff; // Основной текст
+$muted-text: #b0b0b0; // Вторичный текст (неактивные элементы)
+$header-footer-bg: #252525; // Шапка и подвал
+$card-bg: rgba(255, 255, 255, 0.1); // Карточки
+$hover-bg: rgba(255, 255, 255, 0.2); // Hover-эффект
+
+// 📏 Шрифты
+$font-family: 'Arial', sans-serif;
+$base-font-size: 16px;
+$small-font-size: 14px;
+$large-font-size: 18px;
+
+// 📱 Адаптивные брейкпоинты
+$mobile: 576px;
+$tablet: 768px;
+$desktop: 1024px;
+
+// 🟩 UI Элементы
+$border-radius: 8px;
+$box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+$transition-speed: 0.3s;
+
+// 🚀 Анимации
+$hover-scale: scale(1.05);
+$opacity-hover: 0.85;

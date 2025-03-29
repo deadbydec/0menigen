@@ -1,0 +1,70 @@
+.player-info {
+    position: fixed;
+  ;
+    top: 100px;
+    right: 100px;
+    width: 240px;
+    background: rgba(0, 0, 0, 0.603);
+    border-radius: 12px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    border: 0px solid rgba(255, 255, 255, 0.15);
+    overflow: hidden; /* Чтобы прогресс-бар не выходил за границы */
+    border-radius: 14px;
+  }
+  
+  .level-border {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 21px; /* Высота обводки */
+    background: rgba(0, 0, 0, 0.603);
+    border-radius: 12px 12px 0 0;
+    overflow: hidden;
+  }
+  
+  .progress {
+    height: 100%;
+    background: linear-gradient(90deg, #ffcc00, #ff8800);
+    transition: width 0.3s ease-in-out;
+  }
+  
+  .content {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding-top: 10px;
+  }
+  
+  .avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    margin-right: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  .info {
+    color: #fff;
+    font-size: 14px;
+  }
+  
+  .username {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+  
+  .title {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .coins {
+    font-size: 13px;
+    margin-top: 5px;
+  }

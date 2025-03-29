@@ -1,0 +1,93 @@
+/* 🔥 Современный UI со стеклянным эффектом и градиентами */
+.home {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    color: white;
+    font-family: 'Arial', sans-serif;
+    padding: 40px;
+    padding-top: 550px; /* Увеличиваем отступ сверху */
+    gap: 40px;
+    min-height: 100vh; /* Минимальная высота для прокрутки */
+    overflow: hidden;
+  }
+  
+  .hero {
+    padding: 50px 30px;
+    border-radius: 12px;
+    max-width: 600px;
+    background: transparent;
+    z-index: 10;
+    position: relative;
+    will-change: transform;
+  }
+  
+  html, body {
+    overflow-y: scroll; /* Принудительная прокрутка */
+    height: 100%; /* Обеспечиваем полную высоту страницы */
+  }
+  
+  .gradient-text {
+    font-size: 48px;
+    font-weight: bold;
+    background: linear-gradient(90deg, #00ffcc, #00b3ff);
+    color: white;
+    display: inline-block;
+    text-shadow: 0 0 10px rgba(0, 255, 204, 0.7);
+  }
+  
+  .tagline {
+    font-size: 18px;
+    opacity: 0.8;
+    margin-bottom: 20px;
+  }
+  
+  /* 🔥 Кнопки с плавным эффектом */
+  .btn {
+    padding: 12px 24px;
+    font-size: 16px;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: 0.3s;
+    display: inline-block;
+  }
+  
+  .btn-primary {
+    background: linear-gradient(90deg, #00ffcc, #00b3ff);
+    color: black;
+    font-weight: bold;
+  }
+  
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid white;
+  }
+  
+  .btn:hover {
+    transform: scale(1.05);
+  }
+  
+  /* 🔥 Основные блоки */
+  .features {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 800px;
+  }
+  
+  .feature {
+    background: rgba(2, 27, 20, 0.678);
+    padding: 20px;
+    border-radius: 10px;
+    width: 250px;
+  }
+  
+  .feature h2 {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+  
+  

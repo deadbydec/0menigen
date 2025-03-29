@@ -1,0 +1,107 @@
+
+/* Основной контейнер */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; // Убираем лишнюю высоту
+  background: rgba(0, 0, 0, 0.8);
+  position: fixed; // Фиксируем на экране
+  width: 100%;
+}
+
+/* Карточка формы */
+.auth-card {
+  background:rgba(20, 20, 20, 0.8); // Тёмный фон с прозрачностью
+  padding: 25px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Заголовки */
+h2 {
+  color: #fff;
+  font-size: 20px;
+  margin-bottom: 15px;
+}
+
+/* Поля ввода */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  input {
+    width: 85%; // Уменьшили ширину полей
+    padding: 10px;
+    margin: 6px 0;
+    border: 1px solid  rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: border 0.3s ease;
+
+    &:focus {
+      border-color: #ff5252; // Красный при наведении
+      outline: none;
+    }
+  }
+}
+
+/* Кнопки */
+button {
+  width: 85%; // Делаем кнопку по ширине полей
+  background: #d32f2f; // Основной красный
+  color: #fff;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 10px;
+  transition: all 0.3s ease-in-out;
+
+  &:hover {
+    background: #ff5252; // Красный при наведении
+    transform: scale(1.05);
+  }
+}
+
+/* Кнопки переключения */
+.auth-switch {
+  margin-top: 10px;
+
+  button {
+    background: transparent;
+    border: none;
+    color: #ff5252; // Красный при наведении
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.3s;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+/* Анимация появления */
+.auth-form {
+  opacity: 0;
+  animation: fadeIn 0.5s forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

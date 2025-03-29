@@ -1,0 +1,65 @@
+[
+  {
+    "code": "zharnull",
+    "display_name": "Фениксоид",
+    "type": "пасхальный",
+    "vibe": "Пепельное возрождение",
+    "pose": "rebirth-ash"
+  },
+  {
+    "code": "bonektra",
+    "display_name": "Бонектра",
+    "type": "пасхальный",
+    "vibe": "Инвентарь на костях",
+    "pose": "bone-pride"
+  },
+  {
+    "code": "alienot",
+    "display_name": "Алиенот",
+    "type": "пасхальный",
+    "vibe": "Инопортал и глитчи",
+    "pose": "glyph-stance"
+  },
+  {
+    "code": "dyrchiq",
+    "display_name": "Клоунид",
+    "type": "пасхальный",
+    "vibe": "Абсурд и 1 апреля",
+    "pose": "jester-chaos"
+  },
+  {
+    "code": "drakkor",
+    "display_name": "Драккор",
+    "type": "пасхальный",
+    "vibe": "Тайники и логова",
+    "pose": "hoard-keeper"
+  },
+  {
+    "code": "furrix",
+    "display_name": "Фуррикс",
+    "type": "пасхальный",
+    "vibe": "Обнимашки и стиль",
+    "pose": "fluff-hug"
+  },
+  {
+    "code": "exegma",
+    "display_name": "Эксегма",
+    "type": "пасхальный",
+    "vibe": "Апгрейды и перегревы",
+    "pose": "overheat-circuit"
+  },
+  {
+    "code": "hexaplasm",
+    "display_name": "Гексаплазм",
+    "type": "пасхальный",
+    "vibe": "Насекомый баг",
+    "pose": "mantis-prayer"
+  },
+  {
+    "code": "nullvour",
+    "display_name": "Налвур",
+    "type": "пасхальный",
+    "vibe": "Пожиратель небытия",
+    "pose": "void-hollow"
+  }
+]

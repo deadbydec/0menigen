@@ -1,0 +1,89 @@
+.news {
+    text-align: center;
+    padding: 50px;
+    background: transparent;
+    border-radius: 10px;
+  }
+  
+  // 🔍 Категории
+  .news-filter {
+    button {
+      margin: 5px;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.575);
+      color: white;
+      transition: 0.3s;
+  
+      &:hover {
+        background: rgba(100, 100, 100, 0.8);
+      }
+    }
+  
+    .active {
+      background: red;
+      color: white;
+    }
+  }
+  
+  // 📜 Лента новостей
+  .news-feed {
+    max-width: 600px;
+    margin: auto;
+    text-align: left;
+  }
+  
+  .news-item {
+    background: rgba(0, 0, 0, 0.603);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    color: white;
+  }
+  
+  .date {
+    font-size: 12px;
+    color: rgba(200, 200, 200, 0.6);
+  }
+  
+  // 🔥 Лайки и комменты
+  .news-actions {
+    button {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      color: white;
+  
+      &:hover {
+        color: rgb(153, 0, 255);
+      }
+    }
+  }
+  
+  // 💬 Комментарии
+  .comments {
+    background: rgba(0, 0, 0, 0.486);
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    color: white;
+  }
+  
+  .comment {
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
+  
+  .comments input {
+    width: 100%;
+    padding: 5px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border: 1px solid rgba(200, 200, 200, 0.3);
+  }

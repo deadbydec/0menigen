@@ -1,0 +1,46 @@
+[
+    {
+        "title": "Обновления",
+        "description": "Все последние изменения в игре.",
+        "views": 1000,
+        "posts_count": 50,
+        "category": "main"
+    },
+    {
+        "title": "Правила игры",
+        "description": "Прочитайте правила перед началом игры.",
+        "views": 850,
+        "posts_count": 30,
+        "category": "main"
+    },
+    {
+        "title": "История создания игры",
+        "description": "Обсуждаем процесс разработки игры и её концепцию.",
+        "views": 700,
+        "posts_count": 90,
+        "category": "popular"
+    },
+    {
+        "title": "Флудилка",
+        "description": "Общение на любые темы, кроме правил и обновлений.",
+        "views": 650,
+        "posts_count": 150,
+        "category": "popular"
+    },
+    {
+        "title": "Обсуждаем лор",
+        "description": "Все тайны и теории вселенной Омежек.",
+        "views": 500,
+        "posts_count": 80,
+        "category": "popular"
+    },
+    {
+        "title": "Помощь в игре",
+        "description": "Советы, баги, вопросы по игровому процессу.",
+        "views": 400,
+        "posts_count": 45,
+        "category": "popular"
+    }
+]
+
+  

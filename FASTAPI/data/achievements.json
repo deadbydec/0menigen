@@ -1,0 +1,35 @@
+[
+    {
+      "id": "first_blood",
+      "name": "Первая кровь",
+      "description": "Соверши своё первое убийство!",
+      "category": "Бой",
+      "rarity": "common",
+      "reward": 100
+    },
+    {
+      "id": "rich_boi",
+      "name": "Богатей",
+      "description": "Заработай 10 000 монет.",
+      "category": "Экономика",
+      "rarity": "rare",
+      "reward": 500
+    },
+    {
+      "id": "chatty_omeg",
+      "name": "Болтливый Омежка",
+      "description": "Напиши 100 сообщений в глобальном чате.",
+      "category": "Социализация",
+      "rarity": "common",
+      "reward": 50
+    },
+    {
+      "id": "level_10",
+      "name": "Первая ступень",
+      "description": "Достигни 10 уровня.",
+      "category": "Прогресс",
+      "rarity": "common",
+      "reward": 100
+    }
+  ]
+  
