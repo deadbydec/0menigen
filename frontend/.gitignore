@@ -1,24 +1,53 @@
-# Logs
-logs
+# ─── LOGИ И ОШИБКИ ──────────────
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# ─── NODE.JS ────────────────────
+node_modules/
+dist/
+dist-ssr/
+.vite/
 
-# Editor directories and files
-.vscode/*
+# ─── PYTHON ─────────────────────
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.pkl
+*.db
+*.egg-info/
+.env
+.env.*
+
+# ─── REDIS / POSTGRES ──────────
+*.rdb
+*.pid
+*.sock
+*.db-journal
+
+# ─── DOCKER ─────────────────────
+*.tar
+*.pid
+docker-compose.override.yml
+
+# ─── СЕРТИФИКАТЫ ────────────────
+*.pem
+*.key
+
+# ─── VSCODE / IDE ───────────────
+.vscode/
 !.vscode/extensions.json
-.idea
-.DS_Store
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# ─── ОСНОВНОЕ ───────────────────
+.DS_Store
+Thumbs.db
+
