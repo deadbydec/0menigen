@@ -8,6 +8,16 @@ export const useAuthStore = defineStore("auth", () => {
   const isFetching = ref(false);
   const authReady = ref(false);
 
+  watch(
+    () => useAuthStore.user,
+    (user) => {
+      if (user && !user.race_id) {
+        fetchRaces();
+      }
+    },
+    { immediate: true }
+  );
+
 
   // Функция регистрации
   const registerUser = async (username, email, password, confirmPassword) => {

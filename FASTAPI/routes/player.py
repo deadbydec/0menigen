@@ -74,7 +74,7 @@ async def get_public_player(user_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.get("/races")
 async def get_available_races(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Race))
+    result = await db.execute(select(Race).where(Race.is_selectable == True))
     races = result.scalars().all()
 
     return [
@@ -83,11 +83,13 @@ async def get_available_races(db: AsyncSession = Depends(get_db)):
             "code": race.code,
             "display_name": race.display_name,
             "vibe": race.vibe,
-            "description": race.description,  # ⬅️ ДОБАВЛЯЕМ ЭТО
+            "description": race.description,
+            "is_selectable": race.is_selectable,
+            "image_url": race.image_url,
         }
         for race in races
-        if not race.is_selectable  # скрытые (пасхальные) не показываем при выборе
     ]
+
 
 
 @router.post("/player/choose-identity")

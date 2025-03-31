@@ -9,6 +9,14 @@
           class="race-card" 
           :class="{ active: selectedRace && selectedRace.code === race.code }"
           @click="selectRace(race)">
+
+          <img 
+    v-if="race.image_url" 
+    :src="race.image_url" 
+    :alt="race.display_name" 
+    class="race-img"
+  />
+
           <h3>{{ race.display_name }}</h3>
           <p class="vibe">{{ race.vibe }}</p>
           <p class="desc">{{ race.description }}</p>
@@ -65,9 +73,10 @@
     const birthDate = ref("");
     
     const fetchRaces = async () => {
+      console.log("User loaded:", authStore.user);
       try {
         const response = await api.get("/player/races");
-        races.value = response.data;
+        races.value = response.data.filter(r => r.is_selectable);
       } catch (error) {
         console.error("Ошибка загрузки рас:", error);
       }
@@ -100,6 +109,16 @@
     </script>
     
   <style scoped>
+
+.race-img {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+
   /* Общий стиль для обеих веток */
   .identity-selection,
   .not-found {

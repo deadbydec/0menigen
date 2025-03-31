@@ -138,6 +138,7 @@ class Race(Base):
 
     id = Column(Integer, primary_key=True)
     code = Column(String(50), unique=True, nullable=False)
+    image_url = Column(String, nullable=True)
     display_name = Column(String(100), nullable=False)
     vibe = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
