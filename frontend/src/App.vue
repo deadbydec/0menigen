@@ -5,6 +5,8 @@ import PlayerInfo from "@/components/PlayerInfo.vue";
 import GlobalChat from "@/components/GlobalChat.vue";
 import { io } from "socket.io-client";
 import { useChatStore } from "@/store/chat";
+import './global.css'; // импортируем глобальные стили
+import ToastOutlet from "@/components/ToastOutlet.vue"
 
 const authStore = useAuthStore();
 const isAuthenticated = computed(() => authStore.isAuthenticated);
@@ -43,6 +45,7 @@ onMounted(async () => {
   <div v-else>
     <div class="loader">Загрузка...</div>
   </div>
+  <ToastOutlet /> <!-- Наш кастомный рендерер -->
 </template>
 
 
@@ -50,11 +53,6 @@ onMounted(async () => {
 
 
 
-
-
-<style scoped>
-/* Можно добавить глобальные стили, если нужно */
-</style>
 
 
 

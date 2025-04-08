@@ -2,9 +2,12 @@
 import { defineStore } from "pinia";
 import { ref, onMounted, onUnmounted } from "vue";
 import api from "@/utils/axios";
+import { useToastStore } from '@/store/toast' // 👈 импорт сторов как обычно
 
 export const useInventoryStore = defineStore("inventory", () => {
   const inventory = ref([]);
+  const toastStore = useToastStore()
+  const userRace = ref(""); // Новое поле для расы пользователя
   const selectedItem = ref(null);
   const csrfToken = getCookie("csrf_access_token");
 
@@ -20,16 +23,18 @@ export const useInventoryStore = defineStore("inventory", () => {
         withCredentials: true,
         headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
       });
-      inventory.value = response.data.inventory || []
+      inventory.value = response.data.inventory || [];
+      userRace.value = response.data.user_race || ""; // Сохраняем расу пользователя
     } catch (error) {
       console.error("Ошибка загрузки инвентаря:", error);
+      toastStore.addToast("Ошибка загрузки инвентаря", { type: 'error' });
     }
   };
 
   // Использование предмета: вызываем API, затем fetchInventory() для гарантии актуальности
   const useItem = async () => {
     if (!selectedItem.value) {
-      alert("Выберите предмет перед использованием!");
+      toast.error("Выберите предмет перед использованием!");
       return;
     }
     try {
@@ -41,35 +46,58 @@ export const useInventoryStore = defineStore("inventory", () => {
           headers: { "X-CSRF-TOKEN": csrfToken }
         }
       );
-      alert(response.data.message);
+      toastStore.addToast(response.data.message, { type: 'success' });
       await fetchInventory(); // подтягиваем актуальные данные из базы
       selectedItem.value = null;
     } catch (error) {
       console.error("Ошибка использования предмета:", error);
+      toastStore.addToast("Блять. Я не могу это использовать!", { type: 'error' });
     }
   };
 
   // Уничтожение предмета: то же самое — API и затем fetchInventory()
   const destroyItem = async () => {
     if (!selectedItem.value) {
-      alert("Выберите предмет перед удалением!");
+      toast.error("Выберите предмет перед удалением!");
       return;
     }
     try {
       const response = await api.delete(
-        `/inventory/destroy/${selectedItem.value.id}`,
+        `/inventory/discard/${selectedItem.value.id}`,
         {
           withCredentials: true,
           headers: { "X-CSRF-TOKEN": csrfToken }
         }
       );
-      alert(response.data.message);
+      toastStore.addToast(response.data.message, { type: 'success' });
       selectedItem.value = null;
       await fetchInventory();
     } catch (error) {
       console.error("Ошибка уничтожения предмета:", error);
+      toast.error("Ошибка при выбрасовании предмета!");
     }
   };
+
+  const recycleItem = async () => {
+    if (!selectedItem.value) return alert("Выберите предмет для переработки!");
+    try {
+      const response = await api.post(
+        `/inventory/recycle/${selectedItem.value.id}`,
+        null,
+        {
+          withCredentials: true,
+          headers: { "X-CSRF-TOKEN": csrfToken }
+        }
+      );
+      toastStore.addToast(response.data.message, { type: 'success' });
+      await fetchInventory();
+      selectedItem.value = null;
+    } catch (error) {
+      console.error("Ошибка переработки предмета:", error);
+      toastStore.addToast("Сука! Я не могу это переработать!", { type: 'error' });
+    }
+  };
+
 
   // Выбор предмета
   const selectItem = (item) => {
@@ -81,9 +109,11 @@ export const useInventoryStore = defineStore("inventory", () => {
 
   return {
     inventory,
+    userRace,
     selectedItem,
     fetchInventory,
     useItem,
+    recycleItem,
     destroyItem,
     selectItem
   };

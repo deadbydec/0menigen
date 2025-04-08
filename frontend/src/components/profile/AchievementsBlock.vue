@@ -1,6 +1,6 @@
 <template>
   <div class="achievements-block">
-    <h3>🏆 Ачивменты</h3>
+    <h3>Ачивки</h3>
 
     <div class="hex-grid">
       <div 
@@ -80,7 +80,7 @@ const formatDate = (date) => new Date(date).toLocaleDateString();
 .hex-cell {
   width: 60px;
   height: 60px;
-  background: white;
+  background: rgba(255, 255, 255, 0.459);
   border: 2px solid black;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   display: flex;
@@ -91,7 +91,7 @@ const formatDate = (date) => new Date(date).toLocaleDateString();
 }
 
 .hex-cell.placeholder {
-  background: #ddd;
+  background: #646364d7;
   border-color: gray;
 }
 
@@ -117,7 +117,7 @@ const formatDate = (date) => new Date(date).toLocaleDateString();
 }
 
 .show-all-btn {
-  background: red;
+  background: rgba(101, 17, 150, 0.863);
   color: white;
   padding: 8px 12px;
   font-weight: bold;

@@ -1,65 +1,92 @@
 <template>
   <div class="shop-page">
     <h1>Магазин: {{ category }}</h1>
-    <div class="shop-grid" v-if="shopItems && shopItems.length">
-      <div v-for="item in filteredShopItems" :key="item.id" class="shop-slot">
-        <img :src="`/static/goods/${item.image}`" :alt="item.name" />
-        <div class="item-name">{{ item.name }}</div>
-        <div class="item-rarity">{{ item.rarity }}</div>
-        <div class="item-price">Цена: {{ item.price }} монет</div>
-        <div class="item-stock">В наличии: {{ item.stock }}</div>
-        <button @click="buyProduct(item.id)" class="buy-button" :disabled="item.stock <= 0">
-          Купить
-        </button>
-        <!-- Тултип всегда отрисовывается, но его видимость контролируется CSS -->
-        <div class="product-tooltip">
-          {{ item.description }}
+
+    <div class="shop-grid" :class="{ pulse: wasUpdated }">
+      <template v-if="filteredShopItems.length">
+        <div
+          v-for="item in filteredShopItems"
+          :key="item.id"
+          class="shop-slot"
+        >
+          <img
+            :src="`https://localhost:5002/static/goods/${item.image}`"
+            :alt="item.name"
+          />
+          <div class="item-name">{{ item.name }}</div>
+          <div class="item-rarity">{{ item.rarity }}</div>
+          <div class="item-price">Цена: {{ item.price }} монет</div>
+          <div class="item-stock">В наличии: {{ item.stock }}</div>
+          <button
+            @click="handleBuy(item.id, item.name, category)"
+            class="buy-button"
+            :disabled="item.stock <= 0"
+          >
+            Купить
+          </button>
+
+          <!-- Тултип всегда отрисовывается, но видимость через CSS -->
+          <div class="product-tooltip">
+            {{ item.description }}
+          </div>
         </div>
-      </div>
-    </div>
-    <div v-else>
-      <p>Товаров нет или идет загрузка...</p>
+      </template>
+
+      <template v-else>
+        <p>Товаров нет или идёт загрузка...</p>
+      </template>
     </div>
   </div>
 </template>
 
 
+
 <script setup>
-import { computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
-import { useShopStore } from "@/store/shop"; // Путь к твоему стору
+import { ref, computed, onMounted, watch } from "vue";
+import { useShopStore } from "@/store/shop";
 
 const route = useRoute();
 const category = route.params.category || "";
 
 const shopStore = useShopStore();
-const shopItems = shopStore.shopItems;
+const shopItems = computed(() => shopStore.shopItems);
 const fetchShopItems = shopStore.fetchShopItems;
-const buyProduct = shopStore.buyProduct;
+const wasUpdated = computed(() => shopStore.wasUpdated);
 
-// Определяем набор допустимых типов для каждой категории
-const allowedTypesMap = {
-  "продуктовый": ["еда", "напитки", "сладости"],
-  "одежда": ["clothes", "accessories"],
-  // Добавь другие категории и соответствующие типы
+// ✅ Не переопределяй buyProduct, а вызывай напрямую из стора:
+const handleBuy = (id, name, category) => {
+  shopStore.buyProduct(id, name, category); // передаём id и текущую категорию
 };
 
-// Вычисляемый массив отфильтрованных товаров
+// Фильтрация
+const allowedTypesMap = {
+  food: ["еда", "напиток", "сладость"],
+  books: ["книга"],
+  collectioner: ["коллекционный", "сувенир", "игрушка", "наклейка"],
+  drugs: ["аптека"],
+  tech: ["гаджет"],
+  toilet: ["туалет"]
+};
+
 const filteredShopItems = computed(() => {
   const allowedTypes = allowedTypesMap[category];
-  if (allowedTypes && allowedTypes.length) {
+  if (allowedTypes?.length) {
     return shopItems.value.filter(item => allowedTypes.includes(item.product_type));
   }
-  // Если категория не описана – возвращаем всё
   return shopItems.value;
 });
 
-// Загружаем товары при монтировании
 onMounted(() => {
   fetchShopItems(category);
 });
 
+watch(shopItems, () => {
+  console.log("📦 Товары изменились, возможно обновление!");
+});
 </script>
+
+
 
   
   <style scoped>
@@ -209,5 +236,15 @@ onMounted(() => {
       opacity: 1;
     }
   }
+
+  .pulse {
+  animation: pulse 0.6s ease-in-out;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
   </style>
   

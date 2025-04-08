@@ -21,19 +21,18 @@
   <input id="avatar-input" type="file" accept="image/*" @change="uploadAvatar" hidden />
 </div>
 
-    <!-- ✅ Информация об игроке -->
+    <div class="player-info">
     <p class="level">Уровень: {{ player.level || 1 }}</p>
     Опыт: {{ player.xp || 0 }} / {{ player.nextLevelXp || 100 }}
     <h2>{{ player.name || "Омежка" }}</h2>
-    <p>{{ player.usertype || "Без титула" }}</p>
-    <p class="coins">💰 {{ player.coins || 0 }} монет</p>
-    <p>🧿 Нуллинги: {{ player.nullings ?? 0 }}</p>
+    <p>{{ player.usertype || "Без титула" }} — {{ player.race && player.race.display_name || "Неизвестно" }}</p>
+    <p class="coins">💰 {{ player.coins || 0,0 }} монет</p>
+    <p>🧿 {{ player.nullings ?? 0 }} нуллингов</p>
     <p>🎂 ДР: {{ formatDate(player.birthdate) }}</p>
-    <p>🧬 Пол: {{ genderLabel(player.gender) }}</p>
+    <p>🧬 Пол: {{ player.gender_label }}</p>
     <p>🕰️ В игре с {{ formatDate(player.registrationDate) }}</p>
-    <p class="xp">
-  
-</p>
+    <p class="xp"></p>
+  </div>
   </div>
 </template>
   
@@ -138,17 +137,17 @@ const uploadAvatar = async (event) => {
 
 .xp-ring {
   position: absolute;
-  width: 172px;
+  width: 173px;
   height: 174px;
   top: -2px;
-  left: -7px;
+  left: -2px;
   transform: rotate(-90deg);
   z-index: 0;
 }
 
 .xp-ring .bg {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.1);
+  stroke: rgba(48, 40, 53, 0.356);
   stroke-width: 8;
 }
 
@@ -168,8 +167,8 @@ const uploadAvatar = async (event) => {
 }
 
 .avatar {
-  width: 146px;
-  height: 150px;
+  width: 151px;
+  height: 153px;
   border-radius: 50%;
   object-fit: cover;
   transition: opacity 0.2s ease-in-out;
@@ -179,6 +178,7 @@ const uploadAvatar = async (event) => {
 
  .avatar-block {
     text-align: center;
+    max-height: 500px;
     background: rgba(0, 0, 0, 0.582);
     border: 2px solid rgba(0, 0, 0, 0.692);
     padding: 15px;
@@ -209,11 +209,30 @@ const uploadAvatar = async (event) => {
   }
 
   
-  .coins,
-  .level {
-    font-size: 14px;
-    margin: 5px 0;
-  }
+
+  /* Секция с инфой под аватаром */
+.player-info {
+  /* Если хочешь задать фиксированную ширину – раскомментируй следующую строку */
+  /* width: 100%; */
+  text-align: left;
+}
+
+.player-info h2 {
+  font-size: 1.5rem;            /* Увеличенный размер шрифта */
+  font-weight: bold;            /* Жирный шрифт */
+  color: #8329ce;               /* Яркий золотой цвет */
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5); /* Легкая тень для объема */
+  margin-bottom: 5px;           /* Немного отступа снизу для читаемости */
+  padding: auto;
+}
+
+/* Обнуляем стандартные отступы и задаем стабильный line-height */
+.player-info p,
+.player-info h2 {
+  margin: 2px 0;
+  padding: 0;
+  line-height: 1.2;
+}
   </style>
   
   

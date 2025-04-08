@@ -3,6 +3,7 @@
     <h1>Инвентарь</h1>
     <p class="inventory-count">Всего предметов: {{ inventory.length }}</p>
 
+    <div class="block">
     <div class="inventory-grid" v-if="inventory.length">
       <div 
         v-for="item in inventory" 
@@ -28,14 +29,20 @@
 
     <div v-else>
       <p>Инвентарь пуст.</p>
-    </div>
+    </div></div>
 
     <!-- ВНЕ v-for! ОДИН раз! -->
     <div v-if="selectedItem" class="global-inventory-actions">
       <p class="selected-label">Выбран: {{ selectedItem.product.name }}</p>
       <div class="inventory-actions">
         <button @click="useItem" class="use-button">Использовать</button>
-        <button @click="destroyItem" class="destroy-button">Уничтожить</button>
+        <button v-if="inventoryStore.userRace === 'nullvour'" @click="inventoryStore.recycleItem">
+      Переработка
+    </button>
+    <!-- Иначе кнопку уничтожения -->
+    <button v-else @click="inventoryStore.destroyItem">
+      Выбросить
+    </button>
         <button @click="giftModalOpen = true" class="gift-button">Подарить</button>
 
 
@@ -90,7 +97,7 @@ function getRarityClass(rarity) {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 html,
 body {
   height: 100%;
@@ -107,75 +114,51 @@ body {
   margin-bottom: 20px;
 }
 
-/* Сетка инвентаря, аналогичная магазину, максимум 5 карточек в ряду */
+// Сетка инвентаря
 .inventory-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
-  max-width: 1000px; /* например, чтобы максимум умещалось 5 */
+  max-width: 1000px; // максимум умещается 5
 }
 
-/* Карточка предмета */
+// Карточка предмета
 .inventory-slot {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  width: 150px;
-  height: 180px;
+  width: 140px;
+  height: 190px;
   padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background-color: #f9f9f9;
+  border: 1px solid #303030;
+  border-radius: 9px;
+  background-color: #f9f9f9cc;
   transition: transform 0.2s, box-shadow 0.2s;
   text-align: center;
   overflow: hidden;
+  line-height: 1.0;
+
+  &:hover {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  }
+
+  img {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    margin-bottom: 5px;
+  }
+
+  p {
+    font-size: 12px;
+    color: #333;
+    line-height: 0;
+  }
 }
 
-.inventory-slot:hover {
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-}
-
-.item-rarity {
-  font-weight: bold;
-  padding: 4px 6px;
-  border-radius: 4px;
-  text-align: center;
-  margin-top: 6px;
-  font-size: 12px;
-  background-color: transparent; /* или убери вообще */
-  border: none; /* чтобы не было визуального шума */
-}
-
-/* Кастомные классы по редкости */
-.rarity-common {
-  color: #5a5959;
-}
-.rarity-special {
-  color: #13b383;
-}
-.rarity-rare {
-  color: #88c3ff;
-}
-.rarity-legendary {
-  color: gold;
-}
-
-/* Выделение */
-.selected-item {
-  outline: 2px solid white;
-  transform: scale(1.03);
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
-}
-
-.inventory-slot img {
-  width: 80px;
-  height: 80px;
-  object-fit: contain;
-  margin-bottom: 5px;
-}
-
+// Название предмета
 .item-name {
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -188,35 +171,54 @@ body {
   max-width: 160px;
 }
 
-
-.inventory-slot p {
+// Блок редкости и её кастомные стили
+.item-rarity {
+  font-weight: bold;
+  padding: 4px 6px;
+  line-height: 1.1;
+  border-radius: 4px;
+  text-align: center;
   font-size: 12px;
-  color: #333;
+  background-color: transparent;
+  border: none;
 }
 
-/* Блок кнопок, появляющийся при выделении */
+.rarity-common { color: #5a5959; }
+.rarity-special { color: #13b383; }
+.rarity-rare { color: #88c3ff; }
+.rarity-legendary { color: gold; }
+
+// Выделение выбранного предмета
+.selected-item {
+  outline: 2px solid white;
+  transform: scale(1.03);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+// Блок кнопок инвентаря
 .inventory-actions {
   margin: 20px auto 0;
   display: flex;
   justify-content: center;
   gap: 20px;
   padding: 10px 0;
+
+  button {
+    padding: 10px 20px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: 'Fira Code', monospace;
+    transition: all 0.2s ease-in-out;
+    width: fit-content; // убираем фиксированную ширину
+    max-width: 140px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  }
 }
 
-.inventory-actions button {
-  padding: 10px 20px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: bold;
-  font-family: 'Fira Code', monospace;
-  transition: all 0.2s ease-in-out;
-  width: fit-content; /* 💥 УБИВАЕМ ширину */
-  max-width: 140px; /* На всякий пожарный ограничим */
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-}
-
+// Стили для всплывающих подсказок (popper)
 :deep(.v-popper__inner) {
   background: rgba(15, 15, 20, 0.95);
   color: #f0f0f0;
@@ -237,40 +239,35 @@ body {
   display: none;
 }
 
-/* Использовать */
+// Кнопки действий с предметом
 .use-button {
   background-color: #15ce90bd;
   color: white;
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  }
 }
 
-.use-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-}
-
-/* Уничтожить */
 .destroy-button {
   background-color: #000000ab;
   color: white;
-}
-
-.destroy-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  }
 }
 
 .gift-button {
   background-color: #cea419bd;
   color: white;
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  }
 }
-
-.gift-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-}
-
-
 </style>
+
 
 
 

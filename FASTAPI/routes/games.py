@@ -1,67 +1,77 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import JSONResponse
-from fastapi_jwt import JwtAccessBearer, JwtAuthorizationCredentials
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import func, select
+from datetime import datetime, date
 from database import get_db
-from models.models import User, GameScore, Leaderboard
-from datetime import datetime
+from models.models import User, Match3Score
+from auth.cookie_auth import get_current_user_from_cookie
+from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/games", tags=["Games"])
+router = APIRouter(prefix="/api/games", tags=["games"])
 
-jwt_access = JwtAccessBearer(secret_key="supersecretkey")
+class Match3Result(BaseModel):
+    score: int
+    combos: int
+    coins_earned: int
+    xp_earned: int
 
-# 🔥 Заглушка для системы мини-игр с конвертацией очков в монеты
-
-@router.post("/save_score")
-async def save_game_score(
-    game_id: int,
-    score: int,
-    credentials: JwtAuthorizationCredentials = Depends(jwt_access),
-    db: AsyncSession = Depends(get_db)
+@router.post("/match3/submit")
+async def submit_match3_score(
+    data: Match3Result,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user_from_cookie)
 ):
-    """Сохраняет результаты мини-игры и конвертирует очки в монеты."""
-    user_id = int(credentials.subject["user_id"])
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar()
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
-    
-    # Конвертация очков в монеты (1 монета = 100 очков)
-    coins_earned = score // 100
-    user.coins += coins_earned
-    
-    # Сохраняем результат игры в таблице GameScore
-    new_score = GameScore(user_id=user.id, game_id=game_id, score=score, timestamp=datetime.utcnow())
-    db.add(new_score)
-    
-    # Проверяем глобальный рейтинг
-    leaderboard_result = await db.execute(select(Leaderboard).where(Leaderboard.user_id == user_id, Leaderboard.category == "games"))
-    leaderboard_entry = leaderboard_result.scalar()
-    
-    if leaderboard_entry:
-        if score > leaderboard_entry.score:
-            leaderboard_entry.score = score
-            leaderboard_entry.last_updated = datetime.utcnow()
-    else:
-        leaderboard_entry = Leaderboard(user_id=user.id, category="games", score=score)
-        db.add(leaderboard_entry)
-    
-    await db.commit()
-    
-    return JSONResponse(content={"message": "Результат сохранён!", "coins_earned": coins_earned, "total_coins": user.coins}, status_code=status.HTTP_200_OK)
+    today = date.today()
 
-@router.get("/leaderboard")
-async def get_leaderboard(db: AsyncSession = Depends(get_db)):
-    """Возвращает топ-10 игроков по очкам в мини-играх."""
     result = await db.execute(
-        select(User.username, Leaderboard.score)
-        .join(User, User.id == Leaderboard.user_id)
-        .where(Leaderboard.category == "games")
-        .order_by(Leaderboard.score.desc())
+        select(func.count())
+        .select_from(Match3Score)
+        .where(
+            Match3Score.user_id == user.id,
+            Match3Score.is_rewarded == True,
+            func.date(Match3Score.submitted_at) == today
+        )
+    )
+    rewarded_today = result.scalar()
+
+    is_rewarded = rewarded_today < 3
+
+    db.add(Match3Score(
+        user_id=user.id,
+        score=data.score,
+        combos=data.combos,
+        coins_earned=data.coins_earned if is_rewarded else 0,
+        xp_earned=data.xp_earned if is_rewarded else 0,
+        is_rewarded=is_rewarded
+    ))
+
+    if is_rewarded:
+        user.coins += data.coins_earned
+        user.xp += data.xp_earned
+        db.add(user)
+
+    await db.commit()
+
+    return {
+        "message": "Награды выданы!" if is_rewarded else "Лимит наград за сегодня достигнут, но результат сохранён.",
+        "xp_gained": data.xp_earned if is_rewarded else 0,
+        "coins_gained": data.coins_earned if is_rewarded else 0,
+        "score": data.score,
+        "rewarded_today": rewarded_today + (1 if is_rewarded else 0),
+        "reward_limit": 3
+    }
+
+# 🏆 Топ игроков Match-3
+@router.get("/match3/leaderboard")
+async def match3_leaderboard(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(User.username, func.max(Match3Score.score))
+        .join(Match3Score, Match3Score.user_id == User.id)
+        .group_by(User.username)
+        .order_by(func.max(Match3Score.score).desc())
         .limit(10)
     )
-    top_players = result.all()
-    
-    return JSONResponse(content={"leaderboard": [{"username": player[0], "score": player[1]} for player in top_players]}, status_code=status.HTTP_200_OK)
+    top = result.all()
+    return {
+        "leaderboard": [{"username": r[0], "score": r[1]} for r in top]
+    }

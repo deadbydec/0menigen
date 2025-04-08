@@ -1,0 +1,64 @@
+/* Контейнер тостов – переопределяем медиазапросы */
+.Vue-Toastification__container {
+    position: fixed !important;
+    top: 70px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: auto !important;
+    max-width: 600px !important;
+    z-index: 9999 !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+  }
+  
+  /* Отменяем отрицательный margin из медиазапроса библиотеки */
+  @media only screen and (min-width: 600px) {
+    .Vue-Toastification__container.top-center {
+      margin-left: 0 !important;
+    }
+  }
+  
+  /* Стили для тоста */
+  .Vue-Toastification__toast {
+    display: inline-block !important;
+    background-color: rgba(0, 0, 0, 0.85) !important;
+    color: #fff !important;
+    font-size: 1rem !important;
+    border-radius: 5px !important;
+    padding: 10px 15px !important;
+    margin: 10px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    word-wrap: break-word !important;
+    white-space: normal !important;
+    text-align: left !important;
+    max-width: 100% !important;
+    transition: opacity 0.5s ease !important;
+    transform: none !important;
+    animation: none !important;
+  }
+  
+  /* Если где-то inline-стили задают translateX, убираем их */
+  .Vue-Toastification__toast[style*="translateX"] {
+    transform: none !important;
+  }
+
+  .Vue-Toastification__toast,
+.Vue-Toastification__toast[style*="transform"],
+.Vue-Toastification__toast[style*="translate"] {
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+.Vue-Toastification__container {
+    transition: none !important;
+    transform: translateX(-50%) !important;
+  }
+  
+  .Vue-Toastification__container[style*="translate"] {
+    transform: translateX(-50%) !important;
+  }
+  
+  
+  

@@ -28,6 +28,10 @@ import WorldRangs from "@/components/WorldRangs.vue";
 import OmegaForum from "@/components/forum/OmegaForum.vue";
 import ThreadView from "@/components/forum/ThreadView.vue";
 import OriginPage from "@/components/OriginPage.vue";
+import EventsPage from "@/components/events/EventsPage.vue";
+import LandfillPage from '@/components/events/LandfillPage.vue';
+import BlackMarket from '@/components/events/BlackMarket.vue';
+import VoidGate from '@/components/events/VoidGate.vue';
 
 
 
@@ -45,6 +49,10 @@ const routes = [
       { path: "profile", component: UserProfile, meta: { requiresAuth: true } },
       { path: "profile/:id", component: ProfilePage, meta: { requiresAuth: true } },
       { path: "inventory", component: UserInventory, meta: { requiresAuth: true } },
+      { path: "events", component: EventsPage, meta: { requiresAuth: true } },
+      { path: '/landfill', component: LandfillPage, meta: { requiresAuth: true } },
+      { path: '/blackmarket', component: BlackMarket, meta: { requiresAuth: true } },
+      { path: '/voidgate', component: VoidGate, meta: { requiresAuth: true } },
       { path: "players", component: PlayersSearch, meta: { requiresAuth: true } },
       
       { path: "mall", component: MallPage, meta: { requiresAuth: true } },
@@ -52,6 +60,11 @@ const routes = [
 
 
       { path: "games", component: NeonCircus, meta: { requiresAuth: true } },
+      {
+        path: '/games/match3',
+        name: 'Match3',
+        component: () => import('@/components/games/Match3Game.vue')
+      },
       { path: "rangs", component: WorldRangs, meta: { requiresAuth: true } },
       { path: "forum", component: OmegaForum, meta: { requiresAuth: true } },
       { path: "forum/:thread_id", component: ThreadView, meta: { requiresAuth: true } },

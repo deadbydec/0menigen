@@ -29,6 +29,7 @@ function login() {
             <li><router-link to="/news"><font-awesome-icon :icon="['fas', 'newspaper']" /></router-link></li>
             <li><router-link to="/profile"><font-awesome-icon :icon="['fas', 'user']" /></router-link></li>
             <li><router-link to="/inventory"><font-awesome-icon :icon="['fas', 'box']" /></router-link></li>
+            <li><router-link to="/events"><font-awesome-icon :icon="['fas', 'compass']" /></router-link></li>
             <li><router-link to="/games"><font-awesome-icon :icon="['fas', 'gamepad']" /></router-link></li>
             <li><router-link to="/rangs"><font-awesome-icon :icon="['fas', 'trophy']" /></router-link></li>
             <li><router-link to="/mall"><font-awesome-icon :icon="['fas', 'store']" /></router-link></li>
@@ -76,13 +77,15 @@ html, body {
     padding: 0;
     height: 100%;
     overflow: hidden;
+    
   }
   
   .layout {
+
     display: flex;
     flex-direction: column;
     height: 100vh;
-    background: url('/images/Neon_Circus1.png') no-repeat center center fixed;
+    background: url('/images/wasteland1.jpg') no-repeat center center fixed;
     background-size: cover;
   }
   
@@ -143,6 +146,7 @@ html, body {
   }
   
   main {
+    zoom: 0.9;
     flex: 1;
     padding: 30px;
     color: white;

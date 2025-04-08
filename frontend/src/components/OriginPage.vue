@@ -4,34 +4,39 @@
     
       <div class="races">
         <div 
-          v-for="race in races" 
-          :key="race.code" 
-          class="race-card" 
-          :class="{ active: selectedRace && selectedRace.code === race.code }"
-          @click="selectRace(race)">
-
-          <img 
-    v-if="race.image_url" 
-    :src="race.image_url" 
-    :alt="race.display_name" 
+  v-for="race in races" 
+  :key="race.code" 
+  class="race-card" 
+  :class="{ active: selectedRace && selectedRace.code === race.code }"
+  @click="selectRace(race)"
+>
+  <img
+    :src="race.image_url || 'https://dummyimage.com/250x250/000/fff&text=Race'"
+    :alt="race.display_name"
     class="race-img"
+    @error="e => e.target.src = 'https://dummyimage.com/250x250/000/fff&text=Race'" 
   />
 
-          <h3>{{ race.display_name }}</h3>
-          <p class="vibe">{{ race.vibe }}</p>
-          <p class="desc">{{ race.description }}</p>
-        </div>
+  <div class="race-info">
+    <div class="header-block">
+      <h3>{{ race.display_name }}</h3>
+      <p class="vibe">{{ race.vibe }}</p>
+    </div>
+    <p class="desc">{{ race.description }}</p>
+  </div>
+</div>
+
       </div>
       
       <div class="additional-info">
         <div class="form-group">
           <label for="gender">Пол:</label>
           <select v-model="gender" id="gender">
-            <option value="мужской">Мужской</option>
-            <option value="женский">Женский</option>
-            <option value="небинарный">Небинарный</option>
-            <option value="неизвестный">Неизвестный</option>
-          </select>
+  <option value="MALE">Мужской</option>
+  <option value="FEMALE">Женский</option>
+  <option value="NONBINARY">Небинарный</option>
+  <option value="UNKNOWN">Неизвестный</option>
+</select>
         </div>
         
         <div class="form-group">
@@ -73,14 +78,18 @@
     const birthDate = ref("");
     
     const fetchRaces = async () => {
-      console.log("User loaded:", authStore.user);
-      try {
-        const response = await api.get("/player/races");
-        races.value = response.data.filter(r => r.is_selectable);
-      } catch (error) {
-        console.error("Ошибка загрузки рас:", error);
-      }
-    };
+  console.log("User loaded:", authStore.user);
+  try {
+    const response = await api.get("/player/races");
+    console.log("🎲 Полученные расы:", response.data); // 🔥 добавь это
+    races.value = response.data.filter(r => r.is_selectable);
+  } catch (error) {
+    console.error("Ошибка загрузки рас:", error);
+  }
+};
+
+
+
     
     const selectRace = (race) => {
       selectedRace.value = race;
@@ -93,7 +102,7 @@
           gender: gender.value,
           birth_date: birthDate.value,
         });
-        router.push({ name: "home" });
+        router.push("/news")
       } catch (error) {
         console.error("Ошибка при выборе сущности:", error.response?.data || error.message);
       }
@@ -110,14 +119,49 @@
     
   <style scoped>
 
+.identity-selection {
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE 10+ */
+}
+
+.identity-selection::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+.header-block {
+  margin-bottom: 6px;
+}
+
 .race-img {
-  width: 150px;
-  height: 150px;
+  width: 250px;
+  height: 250px;
   object-fit: cover;
   border-radius: 12px;
   margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
+.race-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.vibe {
+  font-weight: bold;
+  color: #e476c9;
+}
+
+.desc {
+  color: #d0d0d0;
+  margin-top: 8px;
+}
 
   /* Общий стиль для обеих веток */
   .identity-selection,
@@ -145,40 +189,48 @@
     justify-content: center;
     gap: 1rem;
     flex-wrap: wrap;
-    margin-bottom: 1.8rem;
+    margin-bottom: 0.9rem;
+    
+    
   }
   
   /* Стиль карточки расы */
   .race-card {
-    padding: 1.2rem;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(5px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background-color: rgba(30, 30, 30, 0.5);
+  transition: transform 0.2s ease;
+  cursor: pointer;
+  text-align: left;
+}
   
   .race-card:hover {
     transform: scale(1.03);
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0);
   }
   
   .race-card.active {
     transform: scale(1.05);
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 25px rgb(6, 216, 164);
   }
   
   .race-card .vibe {
     font-weight: bold;
-    color: #ff99cc;
-    margin-bottom: 0.4rem;
+  color: #e476c9;
+  margin-top: 2px;
+  font-size: 0.95rem;
+  flex-direction: column;
   }
   
   .race-card .desc {
     font-size: 0.9rem;
     color: #ccc;
-    line-height: 1.4;
+    line-height: 1.5;
+  font-size: 0.9rem;
+  flex-direction: column;
   }
   
   .additional-info {

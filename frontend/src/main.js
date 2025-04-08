@@ -11,11 +11,18 @@ import { library } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import FloatingVue from 'floating-vue'
 import 'floating-vue/dist/style.css'
+import 'vue-toastification/dist/index.css';
+import './global.css'; // импортируем глобальные стили
+import './global.scss'; // импортируем глобальные стили
+import { useToastStore } from '@/store/toast' // 👈 импорт сторов как обычно
 
 const app = createApp(App);
 
 const pinia = createPinia();
 app.use(pinia);
+// после app.use(pinia)
+const toastStore = useToastStore()
+toastStore.addToast('🐸 Дырбул-тостовая система активирована!', { type: 'success' })
 
 const authStore = useAuthStore();
 await authStore.fetchUser();

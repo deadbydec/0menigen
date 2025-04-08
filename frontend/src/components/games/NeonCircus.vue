@@ -1,84 +1,142 @@
 <template>
-    <div class="neon-circus">
-      <!-- 🏮 Картинка локации -->
-      <div class="circus-container">
-        <img :src="circusImage" alt="Neon Circus" class="circus-image" />
-        <div class="game-overlay">
+  <div class="neon-circus">
+    <div class="games-section">
+      <h2>🎮 Выберите игру</h2>
+      <div class="game-card-list">
+        <div v-for="game in games" :key="game.id" class="game-card">
+          <img
+            :src="game.image"
+            alt="game preview"
+            class="game-image"
+            @click="goToGame(game.route)"
+          />
+          <div class="game-info">
+            <h3>{{ game.name }}</h3>
+            <p>{{ game.description }}</p>
+          </div>
         </div>
       </div>
-  
-      <!-- 🔥 Блок с играми (позже сделаем кликабельные зоны) -->
-      <div class="games-section">
-        <h2></h2>
-      </div>
     </div>
-  </template>
-  
-  <script setup>
-  import circusImage from "@/assets/neon_circus.png"; // ✅ Загружаем картинку
-  </script>
-  
-  <style scoped>
-  /* 🔥 НЕОНОВОЕ ГЕЙМ-ЛОББИ */
-  .neon-circus {
-    position: relative;
-    margin-top: auto;
-    width: 100%;
-    height: 85vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const games = ref([
+  {
+    id: 1,
+    name: 'Три в ряд',
+    description: 'Собери баги в ряд и получи нуллинги. Осторожно: может затянуть.',
+    image: '/static/images/match3.png',
+    route: '/games/match3'
+  },
+  {
+    id: 2,
+    name: 'Клоунадо',
+    description: 'Мини-игра с Клоунидом. Сколько шуток ты выдержишь, прежде чем сойдёшь с ума?',
+    image: '/static/images/clownado.png',
+    route: '/games/clownado'
   }
-  
-  /* 🎪 БЛОК С ЦИРКОМ */
-  .circus-container {
-    position: relative;
-    width: 50%;
-    max-width: 1200px;
-  }
-  
-  .circus-image {
-    width: 100%;
-    border-radius: 30px;
-    box-shadow: 0 0 20px rgba(255, 0, 255, 0.7);
-    transition: transform 0.3s ease-in-out;
-  }
-  
-  .circus-image:hover {
-    transform: scale(1.02);
-  }
-  
-  /* 🏮 ПОЛУПРОЗРАЧНАЯ НАДПИСЬ */
-  .game-overlay {
-    position: absolute;
-    top: 10%;
-    left: 50%;
-    transform: translateX(-50%);
-    text-align: center;
-    padding: 10px 20px;
-    border-radius: 10px;
-    color: #ff00ff1e;
-    font-size: 20px;
-    font-weight: bold;
-    text-shadow: 0 0 10px #ff00ff2f;
-  }
-  
-  /* 🎰 СЕКЦИЯ С ИГРАМИ */
-  .games-section {
-    text-align: center;
-    margin-top: 20px;
-    color: white;
-  }
-  
-  .games-section h2 {
-    font-size: 24px;
-    text-shadow: 0 0 10px cyan;
-  }
-  
-  .games-section p {
-    font-size: 16px;
-    color: #aaa;
-  }
-  </style>
+])
+
+function goToGame(route) {
+  router.push(route)
+}
+</script>
+
+<style scoped>
+.neon-circus {
+  padding: 30px 10px;
+  min-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: transparent;
+  color: white;
+}
+
+.games-section {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.games-section h2 {
+  font-size: 32px;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px cyan;
+}
+
+.game-card-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.game-card {
+  background: rgba(0, 0, 0, 0.596);
+  border: 2px solid #000000bd;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  transition: transform 0.2s ease;
+  box-shadow: 0 0 12px rgba(111, 0, 255, 0.3);
+}
+
+.game-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 20px rgba(111, 0, 255, 0.6);
+}
+
+.game-image {
+  width: 180px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #111;
+}
+
+.game-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.game-info h3 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.game-info p {
+  font-size: 14px;
+  color: #ccc;
+  margin: 0;
+}
+
+button {
+  align-self: flex-start;
+  background: #6f00ff;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background: #9e00ff;
+}
+</style>
+
   

@@ -1,13 +1,38 @@
 import json
-import redis.asyncio as redis
+import asyncio
+import redis.asyncio as redis_async  # не перезаписывай!
+from config import Config  # убираем конфликт
+from socket_config import sio
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from models.models import Product, ProductRarity, ProductType
 from config import Config
 from sqlalchemy import delete
+from routes.shop import get_random_products
+from database import async_session
 
 # Подключение к Redis (асинхронно)
-redis_client = redis.from_url("redis://localhost", decode_responses=True)
+redis_client = redis_async.from_url("redis://localhost", decode_responses=True)
+
+async def shop_updater_loop():
+    while True:
+        try:
+            print("🔁 Обновляем магазин...")
+
+            async with async_session() as db:
+                new_products = await get_random_products(db)
+
+            await redis_client.set("global_shop", json.dumps(new_products))
+            await sio.emit("shop_updated", {"products": new_products})
+
+            print("✅ Магазин обновлён, ждём 15 минут...")
+
+        except Exception as e:
+            print(f"🔥 Ошибка обновления магазина: {e}")
+
+        await asyncio.sleep(1 * 60)
+
+
 
 # 🔹 Загрузка товаров из JSON
 async def load_products_from_json():

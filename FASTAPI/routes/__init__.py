@@ -17,10 +17,12 @@ from .player import router as player_router
 from .gift import router as gift_router
 from .toilet_doom import router as toilet_doom_router
 from .admin import router as admin_router
-from .dev_loader import router as dev_router
+from .donateshop import router as donateshop_router
+from .landfill import router as landfill_router
 
 __all__ = [
-    "dev_router",
+    "landfill_router",
+    "donateshop_router",
     "admin_router",
     "toilet_doom_router",
     "gift_router",

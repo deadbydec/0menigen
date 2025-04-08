@@ -1,6 +1,6 @@
 import json
 import enum
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, select, Float, ARRAY, TIMESTAMP, Date, func, JSON
 from sqlalchemy.dialects.postgresql import INET
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -22,10 +22,18 @@ async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False
 UTC = timezone.utc
 
 class GenderEnum(str, enum.Enum):
-    MALE = "мужской"
-    FEMALE = "женский"
-    NONBINARY = "небинарный"
-    UNKNOWN = "неизвестный"
+    MALE = "MALE"
+    FEMALE = "FEMALE"
+    NONBINARY = "NONBINARY"
+    UNKNOWN = "UNKNOWN"
+
+    def to_russian(self):
+        return {
+            "MALE": "мужской",
+            "FEMALE": "женский",
+            "NONBINARY": "небинарный",
+            "UNKNOWN": "неизвестный"
+        }[self.value]
 
 
 # 🔥 ENUM КЛАССЫ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ
@@ -87,7 +95,8 @@ class User(Base):
     wall_posts = relationship("WallPost", back_populates="user", cascade="all, delete-orphan")
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
     role = relationship("Role", back_populates="users")
-
+    landfill_pickups = relationship("LandfillPickupLimit", back_populates="user", cascade="all, delete-orphan")
+    thrown_items = relationship("LandfillItem", back_populates="thrown_by", cascade="all, delete-orphan")
 
     def get_xp_to_next_level(self) -> int:
         return 100 + (self.level * 20)
@@ -112,11 +121,9 @@ class User(Base):
     def __repr__(self):
         return f'<User {self.username}, Level {self.level}, XP {self.xp}>'
 
+
+
     async def add_xp(self, session: AsyncSession, amount: int):
-        """
-        Добавляем пользователю XP. Если XP превысило лимит для уровня,
-        повышаем уровень и пересчитываем остаток XP.
-        """
         self.xp += amount
         xp_needed = self.get_xp_to_next_level()
 
@@ -125,7 +132,7 @@ class User(Base):
             self.xp -= xp_needed
             xp_needed = self.get_xp_to_next_level()
 
-        await session.commit()
+
 
 # 🔥 ФУНКЦИИ ПОЛУЧЕНИЯ БД-СЕССИИ
 async def get_db():
@@ -251,15 +258,47 @@ class Friendship(Base):
             return {"error": "Друг не найден!"}
 
 
+class AchievementTriggerType(str, enum.Enum):
+    ITEM_OBTAINED = "item_obtained"
+    ITEM_USED = "item_used"
+    BOOK_READ = "book_read"
+    COLLECTION_COMPLETED = "collection_completed"
+    ACTIVITY_DONE = "activity_done"
+    DAILY_COMPLETED = "daily_completed"
+    INVENTORY_FULL = "inventory_full"
+    TOILET_VISITED = "toilet_visited"
+    MESSAGE_SENT = "message_sent"
+    FRIEND_ADDED = "friend_added"
+    GIFT_SENT = "gift_sent"
+    SECRET_FOUND = "secret_found"
+    NULLING_EARNED = "nulling_earned"
+    LEVEL_REACHED = "level_reached"
+
+
+class Achievement(Base):
+    __tablename__ = "achievements"
+
+    id = Column(String(50), primary_key=True)  # id из JSON, как у тебя
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    icon = Column(String, nullable=True)
+    is_hidden = Column(Boolean, default=False)
+
+    trigger_type = Column(SqlEnum(AchievementTriggerType, name="achievement_trigger_type"), nullable=False)
+    trigger_data = Column(JSON, nullable=True)  # любые параметры
+    reward = Column(JSON, nullable=True)  # {"coins": 50, "xp": 100}
+
+
 class UserAchievement(Base):
     __tablename__ = "user_achievements"
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    achievement_id = Column(String(50), nullable=False)  # ID из JSON-файла
+    achievement_id = Column(String(50), ForeignKey("achievements.id"), nullable=False)
     earned_at = Column(DateTime, default=datetime.now(UTC))  # Когда ачивка получена
 
-    user = relationship("User", backref="achievements", lazy=True)
+    user = relationship("User", backref="unlocked_achievements")
+    achievement = relationship("Achievement")
 
     def to_dict(self):
         """Конвертирует ачивку в JSON-формат"""
@@ -389,6 +428,9 @@ class Product(Base):
     rarity = Column(SqlEnum(ProductRarity, name="product_rarity"), nullable=False, default=ProductRarity.common)
     product_type = Column(SqlEnum(ProductType, name="product_type"), nullable=False, default=ProductType.drink)
     stock = Column(Integer, default=0)  # количество в наличии
+    is_nulling_only = Column(Boolean, default=False)  # 🔥 Только за нуллинги
+    nulling_price = Column(Float, default=0.0)  # Цена в нуллингах, если is_nulling_only=True
+
 
     items = relationship('InventoryItem', back_populates='product', cascade="all, delete-orphan")
 
@@ -579,4 +621,168 @@ class ToiletVote(Base):
     target_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     vote_type = Column(String(10), nullable=False)  # 'like' or 'dislike'
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class LandfillItem(Base):
+    __tablename__ = "landfill_items"
+
+    id = Column(Integer, primary_key=True)
+    product_id = Column(Integer, ForeignKey('products.id'), nullable=False)
+    quantity = Column(Integer, default=1)
+    thrown_by_id = Column(Integer, ForeignKey("user.id"), nullable=True)
+    thrown_at = Column(DateTime, default=datetime.utcnow)
+
+    product = relationship("Product")
+    thrown_by = relationship("User", back_populates="thrown_items")
+
+class LandfillPickupLimit(Base):
+    __tablename__ = "landfill_pickup_limit"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    date = Column(Date, default=lambda: datetime.now().date())
+    count = Column(Integer, default=0)
+
+    user = relationship("User", back_populates="landfill_pickups")
+
+class UserLibrary(Base):
+    __tablename__ = "user_library"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    added_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", backref="library_books")
+    product = relationship("Product")
+
+class BookContent(Base):
+    __tablename__ = "book_content"
+
+    id = Column(Integer, primary_key=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    page_number = Column(Integer, nullable=False)
+    text = Column(Text, nullable=False)
+
+    product = relationship("Product", backref="pages")
+
+
+class Collection(Base):
+    __tablename__ = "collections"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    description = Column(Text)
+    image = Column(String)
+
+class CollectionItem(Base):
+    __tablename__ = "collection_items"
+
+    id = Column(Integer, primary_key=True)
+    collection_id = Column(Integer, ForeignKey("collections.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+
+    collection = relationship("Collection", backref="items")
+    product = relationship("Product")
+
+
+class UserCollectionItem(Base):
+    __tablename__ = "user_collection_items"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    added_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", backref="collected_items")
+    product = relationship("Product")
+
+
+class RewardType(str, enum.Enum):
+    COINS = "coins"
+    XP = "xp"
+    NULLINGS = "nullings"
+    ITEM = "item"
+    RANDOM = "random"  # случайный эффект
+    TITLE = "title"    # редкий титул игроку
+
+class ActivityType(str, enum.Enum):
+    DAILY = "daily"         # Ежедневная активность, выдается случайно
+    NPC = "npc"             # Привязана к конкретному NPC
+    SPECIAL = "special"     # Событийная или пасхальная
+    HIDDEN = "hidden"       # Не показывается до активации
+    STORY = "story"         # Часть сюжетного контента или цепочки
+
+class Activity(Base):
+    __tablename__ = "activities"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    description = Column(Text)
+    type = Column(SqlEnum(ActivityType, name="activity_type_enum"), nullable=False)
+    reward = Column(JSON)  # {"coins": 10, "xp": 50}
+    cooldown_seconds = Column(Integer, nullable=True)
+
+
+class UserActivity(Base):
+    __tablename__ = "user_activities"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    activity_id = Column(Integer, ForeignKey("activities.id"), nullable=False)
+    completed_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", backref="activity_log")
+    activity = relationship("Activity")
+
+
+class DailyActivityPool(Base):
+    __tablename__ = "daily_activity_pool"
+
+    id = Column(Integer, primary_key=True)
+    activity_id = Column(Integer, ForeignKey("activities.id"), nullable=False)
+    weight = Column(Integer, default=1)  # шанс выпадения
+    is_enabled = Column(Boolean, default=True)
+
+    activity = relationship("Activity", backref="pool_entries")
+
+class UserDailyActivity(Base):
+    __tablename__ = "user_daily_activities"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    activity_id = Column(Integer, ForeignKey("activities.id"), nullable=False)
+    assigned_at = Column(Date, default=date.today)
+    is_completed = Column(Boolean, default=False)
+
+    user = relationship("User", backref="daily_activities")
+    activity = relationship("Activity")
+
+class UserActivityProgress(Base):
+    __tablename__ = "user_activity_progress"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id"))
+    activity_id = Column(Integer, ForeignKey("activities.id"))
+    current = Column(Integer, default=0)
+    goal = Column(Integer, nullable=False)
+
+    user = relationship("User", backref="activity_progress")
+    activity = relationship("Activity")
+
+
+class Match3Score(Base):
+    __tablename__ = "match3_scores"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    score = Column(Integer, nullable=False)
+    combos = Column(Integer)
+    coins_earned = Column(Integer)
+    xp_earned = Column(Integer)
+    is_rewarded = Column(Boolean, default=False)
+    submitted_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", backref="match3_scores")
+
+
 

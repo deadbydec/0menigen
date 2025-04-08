@@ -1,6 +1,7 @@
 import os
 import json
 import socketio
+import asyncio
 from redis.asyncio import Redis  # ✅ Правильный импорт!
 import uvicorn
 from config import settings
@@ -26,8 +27,11 @@ from starlette.requests import Request
 from auth.cookie_auth import get_current_user_from_cookie, DebugCookieAuthMiddleware, AsyncCookieAuthMiddleware
 from routes import chat_router, admin_router
 from config import Config
+from utils.shoputils import shop_updater_loop
 
 app = FastAPI()
+
+socket_manager = SocketManager(app)
 
 
 app.add_middleware(
@@ -39,6 +43,9 @@ app.add_middleware(
 )
 
 app.add_middleware(AsyncCookieAuthMiddleware)
+
+
+
 
 # 🛠️ Добавляем костыль для OPTIONS, чтобы избежать 400
 @app.options("/{rest_of_path:path}")
@@ -55,27 +62,30 @@ jwt_access = JwtAccessBearer(
 
 redis_client = Redis.from_url("redis://localhost", decode_responses=True)
 
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(shop_updater_loop())
 
+    async with async_session() as db:
+        result = await db.execute(select(TokenBlocklist))
+        tokens = result.scalars().all()
+        for token in tokens:
+            await db.delete(token)
+        await db.commit()
+    print("✅ Блоклист токенов очищен при старте сервера!")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+    )
 
 from routes.chat import socket_app, router as chat_router
 app.mount("/socket.io", socket_app)
 app.mount("/api/profile/avatars", StaticFiles(directory=Config.UPLOAD_FOLDER), name="avatars")
 app.mount("/static", StaticFiles(directory=Config.BASE_DIR + "/static"), name="static")
 
-
-
-@app.on_event("startup")
-async def clear_old_tokens():
-    """Удаляет все токены из блоклиста при рестарте сервера."""
-    async with async_session() as db:
-        result = await db.execute(select(TokenBlocklist))
-        tokens = result.scalars().all()
-
-        for token in tokens:
-            await db.delete(token)
-
-        await db.commit()
-    print("✅ Блоклист токенов очищен при старте сервера!")
 
 
 # 🔥 Делаем обработчик OPTIONS-запросов, как во Flask
@@ -98,7 +108,7 @@ async def root():
     return {"message": "FastAPI + Socket.IO работает!"}
 
 
-from routes import auth_router, dev_router, toilet_doom_router, gift_router, shop_router, news_router, index_router, player_router, players_router, inventory_router, games_router, profile_router, friends_router, inbox_router, wall_router, achievements_router, leaderboard_router, forum_router
+from routes import auth_router, landfill_router, donateshop_router, toilet_doom_router, gift_router, shop_router, news_router, index_router, player_router, players_router, inventory_router, games_router, profile_router, friends_router, inbox_router, wall_router, achievements_router, leaderboard_router, forum_router
 
 # Подключаем роутеры (аналог Flask Blueprint)
 app.include_router(index_router)
@@ -109,7 +119,7 @@ app.include_router(chat_router, prefix="/api/chat")
 app.include_router(shop_router, prefix="/api/shop")
 app.include_router(inventory_router)
 app.include_router(forum_router, prefix="/api/forum")
-app.include_router(games_router, prefix="/api/games")
+app.include_router(games_router)
 app.include_router(profile_router, prefix="/api/profile")
 app.include_router(friends_router, prefix="/api/friends")
 app.include_router(inbox_router, prefix="/api/inbox")
@@ -120,7 +130,8 @@ app.include_router(player_router)
 app.include_router(gift_router)
 app.include_router(toilet_doom_router)
 app.include_router(admin_router)
-app.include_router(dev_router)
+app.include_router(landfill_router)
+app.include_router(donateshop_router, prefix="/api/donateshop")
 
 
 

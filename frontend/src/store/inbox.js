@@ -34,7 +34,7 @@ export const useInboxStore = defineStore("inbox", () => {
 
   const sendMessage = async ({ recipient, content, subject }) => {
     try {
-      const response = await api.post("/inbox/send/", {
+      const response = await api.post("/inbox/send", {
         recipient,
         content,
         subject,

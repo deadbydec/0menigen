@@ -1,10 +1,28 @@
 <template>
   <div v-if="player && $route.path !== '/profile'" class="player-info">
-    <div class="level-border">
-      <div class="progress" :style="{ width: `${xpPercent}%` }"></div>
-    </div>
+    
+    
+    
+    
     <div class="content">
+      <!-- Контейнер с кольцом опыта и аватаркой -->
+      <div class="avatar-progress-container">
+        <svg class="xp-ring" viewBox="0 0 140 140">
+          <circle class="bg" cx="70" cy="70" r="64" />
+          <circle
+            class="fg"
+            cx="70" cy="70" r="64"
+            :stroke-dasharray="circumference"
+            :stroke-dashoffset="xpOffset"
+          />
+        </svg>
+      
+      
+      
+      
+      
       <img :src="computedAvatar" alt="Avatar" class="avatar" />
+      </div>
       <div class="info">
         <h3 class="username">{{ player.name || 'Омежка' }}</h3>
         <p class="title">{{ player.usertype || 'Омежка' }}</p>
@@ -30,7 +48,23 @@ const authStore = useAuthStore();
 
 const isAuthenticated = computed(() => authStore.isAuthenticated);
 const player = computed(() => playerStore.player);
-const xpPercent = computed(() => playerStore.xpPercent);
+
+// Параметры кольца опыта
+const radius = 64;
+const circumference = 2 * Math.PI * radius;
+
+const xpPercent = computed(() => {
+  if (!player.value) return 0;
+  return (player.value.xp / player.value.nextLevelXp) * 100;
+});
+
+const xpOffset = computed(() => {
+  return circumference - (circumference * xpPercent.value) / 100;
+});
+
+
+
+
 
 // ✅ Динамическое обновление аватарки (избегаем кэша)
 const computedAvatar = computed(() => {
@@ -53,71 +87,109 @@ onMounted(() => {
     playerStore.fetchPlayer();
   }
 });
+
+
+
+
+
 </script>
 
 
   
-  <style lang="scss">
+<style lang="scss" scoped>
 .player-info {
-    position: fixed;
-  ;
-    top: 120px;
-    right: 120px;
-    width: 240px;
-    background: rgba(0, 0, 0, 0.603);
-    border-radius: 12px;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    border: 0px solid rgba(255, 255, 255, 0.15);
-    overflow: hidden; /* Чтобы прогресс-бар не выходил за границы */
-    border-radius: 14px;
-  }
-  
+  position: fixed;
+  top: 120px;
+  right: 130px;
+  width: 240px;
+  background: rgba(0, 0, 0, 0.603);
+  border-radius: 14px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  border: 0px solid rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
 
-  
-  .progress {
-    height: 100%;
-    background: linear-gradient(90deg, #ffcc00, #ff8800);
-    transition: width 0.3s ease-in-out;
-  }
-  
-  .content {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    padding-top: 10px;
-  }
-  
-  .avatar {
-    width: 110px;
-    height: 110px;
-    border-radius: 50%;
-    margin-right: 12px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-  }
-  
-  .info {
-    color: #fff;
-    font-size: 17px;
-  }
-  
-  .username {
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 4px;
-  }
-  
-  .title {
-    font-size: 15px;
-    color: rgba(204, 129, 247, 0.7);
-  }
-  
-  .coins {
-    font-size: 15px;
-    margin-top: 5px;
-  }
+.content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding-top: 10px;
+}
+
+/* Контейнер под кольцо и аватар */
+.avatar-progress-container {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  margin: 0 auto 11px;
+  flex-shrink: 0; /* чтобы не сжимался */
+}
+
+/* Кольцо */
+.xp-ring {
+  position: absolute;
+  top: -23px;
+  left: -22px;
+  /* Масштабируем с 140×140 до 110×110 => ~0.7857 */
+  width: 158px;
+  height: 159px;
+  transform: rotate(-90deg) scale(0.79);
+  transform-origin: center;
+  z-index: 0;
+}
+
+.xp-ring .bg {
+  fill: none;
+  stroke: rgba(48, 40, 53, 0.644);
+  stroke-width: 8;
+}
+
+.xp-ring .fg {
+  fill: none;
+  stroke: #00ffc3;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.4s ease;
+}
+
+/* Аватарка */
+.avatar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  object-fit: cover;
+  z-index: 1;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Инфа справа от аватарки */
+.info {
+  color: #fff;
+  font-size: 17px;
+  margin-left: 12px;
+}
+
+.username {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.title {
+  font-size: 15px;
+  color: rgba(204, 129, 247, 0.7);
+}
+
+.coins {
+  font-size: 15px;
+  margin-top: 5px;
+}
 </style>
   

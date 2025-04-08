@@ -1,0 +1,60 @@
+// global.scss
+
+// Контейнер уведомлений – переопределяем медиазапросы библиотеки
+.Vue-Toastification__container {
+    position: fixed !important;
+    top: 70px !important; // чуть ниже навбара
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: auto !important;
+    max-width: 600px !important;
+    z-index: 9999 !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+  }
+  
+  // Полное переопределение стилей тоста
+  .Vue-Toastification__toast {
+    display: inline-block !important;
+    background-color: rgba(0, 0, 0, 0.85) !important;
+    color: #fff !important;
+    font-size: 1rem !important;
+    border-radius: 5px !important;
+    padding: 10px 15px !important;
+    margin: 10px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    word-wrap: break-word !important;
+    white-space: normal !important;
+    text-align: left !important;
+    max-width: 100% !important;
+    transition: opacity 0.5s ease !important;
+    transform: none !important;
+    animation: none !important;
+  }
+  
+  // Если где-то inline-стили задают translateX, принудительно убираем их
+  .Vue-Toastification__toast[style*="translateX"] {
+    transform: none !important;
+  }
+  
+  // Определяем свои keyframes, которые меняют только opacity
+  @keyframes my-fade-enter {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes my-fade-leave {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  
+  // Применяем наши keyframes для кастомного перехода "my-fade"
+  .my-fade-enter-active {
+    animation: my-fade-enter 0.5s forwards !important;
+  }
+  
+  .my-fade-leave-active {
+    animation: my-fade-leave 0.5s forwards !important;
+  }
+  

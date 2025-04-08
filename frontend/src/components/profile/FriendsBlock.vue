@@ -1,6 +1,6 @@
 <template>
   <div class="friends-block">
-    <h3>👥 Друзья</h3>
+    <h3>Друзья</h3>
     <ul>
       <li v-for="friend in friends" :key="friend.id">
         <router-link :to="`/profile/${friend.id}`">
@@ -21,6 +21,7 @@ const { friends } = useFriendsStore();
 .friends-block {
   max-width: 400px;
   border: 2px solid rgba(0, 0, 0, 0.692);
+  height: 350px;
 }
 
 .addPost {
