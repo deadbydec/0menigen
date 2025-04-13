@@ -108,7 +108,7 @@ async def root():
     return {"message": "FastAPI + Socket.IO работает!"}
 
 
-from routes import auth_router, landfill_router, donateshop_router, toilet_doom_router, gift_router, shop_router, news_router, index_router, player_router, players_router, inventory_router, games_router, profile_router, friends_router, inbox_router, wall_router, achievements_router, leaderboard_router, forum_router
+from routes import auth_router, safe_router, playershop_router, landfill_router, donateshop_router, toilet_doom_router, gift_router, shop_router, news_router, index_router, player_router, players_router, inventory_router, games_router, profile_router, friends_router, inbox_router, wall_router, achievements_router, leaderboard_router, forum_router
 
 # Подключаем роутеры (аналог Flask Blueprint)
 app.include_router(index_router)
@@ -132,8 +132,11 @@ app.include_router(toilet_doom_router)
 app.include_router(admin_router)
 app.include_router(landfill_router)
 app.include_router(donateshop_router, prefix="/api/donateshop")
+app.include_router(playershop_router, prefix="/api/playershop")
+app.include_router(safe_router, prefix="/api/safe")
 
-
+from routes.socketio import socket_app
+app.mount("/socket.io", socket_app)
 
 SSL_CERT_PATH = "C:/Users/cumvolk/omeznet/frontend/localhost+2.pem"
 SSL_KEY_PATH = "C:/Users/cumvolk/omeznet/frontend/localhost+2-key.pem"

@@ -93,8 +93,9 @@ const enterShop = (route) => {
 
 /* Карточка в стиле EventsPage */
 .shop-card {
+  border: 1px solid rgb(0, 0, 0);
   display: block;
-  background: #2d2d2d;
+  background: #00000093;
   padding: 1.5rem;
   border-radius: 0.75rem;
   text-align: center;

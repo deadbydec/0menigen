@@ -1,7 +1,6 @@
 <template>
   <div class="neon-circus">
     <div class="games-section">
-      <h2>🎮 Выберите игру</h2>
       <div class="game-card-list">
         <div v-for="game in games" :key="game.id" class="game-card">
           <img

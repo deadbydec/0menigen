@@ -104,12 +104,12 @@ onMounted(() => {
   width: 240px;
   background: rgba(0, 0, 0, 0.603);
   border-radius: 14px;
+  border: 1px solid rgb(0, 0, 0);
   padding: 15px;
   display: flex;
   flex-direction: column;
   align-items: center;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  border: 0px solid rgba(255, 255, 255, 0.15);
   overflow: hidden;
 }
 

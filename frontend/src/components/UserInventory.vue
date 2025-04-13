@@ -4,63 +4,64 @@
     <p class="inventory-count">Всего предметов: {{ inventory.length }}</p>
 
     <div class="block">
-    <div class="inventory-grid" v-if="inventory.length">
-      <div 
-        v-for="item in inventory" 
-        :key="item.id" 
-        class="inventory-slot"
-        @click="selectItem(item)"
-        :class="{ 'selected-item': selectedItem && selectedItem.id === item.id }"
-        v-tooltip="item.product.description"
-        
-      >
-        <img 
-          :src="`${STATIC_BASE}/static/goods/${item.product.image}`" 
-          :alt="item.product.name" 
-          @error="onImageError"
-        />
-        <div class="item-name">{{ item.product.name }}</div>
-        <p>Кол-во: {{ item.quantity }}</p>
-        <div class="item-rarity" :class="getRarityClass(item.product.rarity)">
-          {{ item.product.rarity }}
+      <div class="inventory-grid" v-if="inventory.length">
+        <div 
+          v-for="item in inventory" 
+          :key="item.id" 
+          class="inventory-slot"
+          @click="selectItem(item)"
+          :class="{ 'selected-item': selectedItem && selectedItem.id === item.id }"
+          v-tooltip="item.product.description"
+        >
+          <img 
+            :src="`${STATIC_BASE}/static/goods/${item.product.image}`" 
+            :alt="item.product.name" 
+            @error="onImageError"
+          />
+          <div class="item-name">{{ item.product.name }}</div>
+          <p>Кол-во: {{ item.quantity }}</p>
+          <div class="item-rarity" :class="getRarityClass(item.product.rarity)">
+            {{ item.product.rarity }}
+          </div>
         </div>
+      </div>
+
+      <div v-else>
+        <p>Инвентарь пуст.</p>
       </div>
     </div>
 
-    <div v-else>
-      <p>Инвентарь пуст.</p>
-    </div></div>
-
-    <!-- ВНЕ v-for! ОДИН раз! -->
+    <!-- Действия с выбранным предметом -->
     <div v-if="selectedItem" class="global-inventory-actions">
       <p class="selected-label">Выбран: {{ selectedItem.product.name }}</p>
       <div class="inventory-actions">
         <button @click="useItem" class="use-button">Использовать</button>
+        
+        <!-- Если пользователь Наллвур → кнопка Переработки, иначе Уничтожить -->
         <button v-if="inventoryStore.userRace === 'nullvour'" @click="inventoryStore.recycleItem">
-      Переработка
-    </button>
-    <!-- Иначе кнопку уничтожения -->
-    <button v-else @click="inventoryStore.destroyItem">
-      Выбросить
-    </button>
-        <button @click="giftModalOpen = true" class="gift-button">Подарить</button>
+          Переработка
+        </button>
+        <button v-else @click="inventoryStore.destroyItem">
+          Выбросить
+        </button>
 
+        <button @click="giftModalOpen = true" class="gift-button">Подарить</button>
+        <button @click="sendToVault">В сейф</button>
 
         <GiftModal
-    v-if="giftModalOpen"
-    :visible="giftModalOpen"
-    :item-id="selectedItem?.id"
-    :item-name="selectedItem?.product.name"
-    @close="giftModalOpen = false"
-  />
+          v-if="giftModalOpen"
+          :visible="giftModalOpen"
+          :item-id="selectedItem?.id"
+          :item-name="selectedItem?.product.name"
+          @close="giftModalOpen = false"
+        />
       </div>
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, computed } from 'vue'
+import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useInventoryStore } from '@/store/inventory'
 import GiftModal from "./GiftModal.vue"
 
@@ -75,127 +76,160 @@ const useItem = inventoryStore.useItem
 const destroyItem = inventoryStore.destroyItem
 const giftModalOpen = ref(false)
 
+async function sendToVault() {
+  if (!selectedItem.value) return
+  try {
+    await inventoryStore.sendToVault(selectedItem.value.id, 1)
+    alert("Предмет отправлен в сейф!")
+  } catch (err) {
+    console.error("Ошибка при отправке в сейф", err)
+    alert(err.response?.data?.detail || "Не удалось отправить предмет в сейф")
+  }
+}
 
 function onImageError(e) {
   e.target.src = `${STATIC_BASE}/static/goods/no_image.png`
 }
 
 onMounted(() => fetchInventory())
-
 onUnmounted(() => {
   inventoryStore.selectedItem = null
 })
 
 function getRarityClass(rarity) {
   switch (rarity) {
+    case 'мусорный': return 'rarity-trash';
     case 'обычный': return 'rarity-common';
+    case 'призовой': return 'rarity-prize';
     case 'особый': return 'rarity-special';
+    case 'эпический': return 'rarity-epic';
     case 'редкий': return 'rarity-rare';
     case 'легендарный': return 'rarity-legendary';
+    case 'уникальный': return 'rarity-unique';
+    case 'древний': return 'rarity-elder';
+    case 'исчезнувший': return 'rarity-vanished';
+    case 'глитчевый': return 'rarity-glitched';
+    case 'пустотный': return 'rarity-void';
     default: return '';
   }
 }
 </script>
 
 <style scoped lang="scss">
-html,
-body {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+/* Убираем лишние стили для body */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #f0f0f0;
+  overflow-y: auto; /* Скролл пойдёт по всей странице */
 }
 
+/* Блок со всем контентом инвентаря. Ставим масштаб 80%. */
 .inventory-page {
-  padding: 20px;
+  margin: 0 auto;
+  padding: 10px;
+  transform: scale(0.8);
+  transform-origin: top center;
   text-align: center;
+
+  h1 {
+    margin: 0 0 15px;
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .inventory-count {
+    margin-bottom: 10px;
+  }
 }
 
-.inventory-count {
-  margin-bottom: 20px;
-}
-
-// Сетка инвентаря
+/* Сетка, аналогичная магазину */
 .inventory-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 1rem;
-  max-width: 1000px; // максимум умещается 5
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
-// Карточка предмета
+/* Карточка предмета */
 .inventory-slot {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  width: 140px;
-  height: 190px;
-  padding: 10px;
+  padding: 6px;
   border: 1px solid #303030;
   border-radius: 9px;
   background-color: #f9f9f9cc;
   transition: transform 0.2s, box-shadow 0.2s;
   text-align: center;
   overflow: hidden;
-  line-height: 1.0;
 
   &:hover {
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 
   img {
-    width: 100px;
-    height: 100px;
+    width: 110px;
+    height: 110px;
     object-fit: contain;
-    margin-bottom: 5px;
+    margin-bottom: 3px;
   }
 
   p {
     font-size: 12px;
     color: #333;
-    line-height: 0;
+    margin: 2px 0; 
   }
 }
 
-// Название предмета
+/* Название */
 .item-name {
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  white-space: normal;
-  text-align: center;
-  display: block;
+  margin: 2px 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
   color: #333;
-  font-weight: bold;
-  font-size: 14px;
-  max-width: 160px;
+  max-width: 90%;
+  word-break: break-word;
 }
 
-// Блок редкости и её кастомные стили
+/* Редкость */
 .item-rarity {
-  font-weight: bold;
-  padding: 4px 6px;
-  line-height: 1.1;
-  border-radius: 4px;
-  text-align: center;
+  margin: 2px 0;
   font-size: 12px;
+  line-height: 1.2;
+  font-weight: bold;
+  max-width: 90%;
+  word-break: break-word;
   background-color: transparent;
   border: none;
 }
 
-.rarity-common { color: #5a5959; }
-.rarity-special { color: #13b383; }
-.rarity-rare { color: #88c3ff; }
-.rarity-legendary { color: gold; }
+/* Расцветки редкостей */
+.rarity-trash { color: #585858; }
+.rarity-common { color: #406374; }
+.rarity-prize { color: rgb(255, 76, 201); }
+.rarity-special { color: #48e9b3; }
+.rarity-rare { color: #20cf46; }
+.rarity-epic { color: rgb(131, 37, 238); }
+.rarity-legendary { color: rgb(230, 158, 24); }
+.rarity-unique { color: rgb(238, 108, 76); }
+.rarity-elder { color: rgb(143, 36, 17); }
+.rarity-vanished { color: rgb(144, 197, 181); }
+.rarity-glitched { color: rgb(136, 93, 255); }
+.rarity-void { color: rgb(71, 29, 221); }
 
-// Выделение выбранного предмета
+/* Выделение выбранного */
 .selected-item {
   outline: 2px solid white;
   transform: scale(1.03);
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
 }
 
-// Блок кнопок инвентаря
+/* Блок с кнопками */
 .inventory-actions {
   margin: 20px auto 0;
   display: flex;
@@ -212,34 +246,13 @@ body {
     font-weight: bold;
     font-family: 'Fira Code', monospace;
     transition: all 0.2s ease-in-out;
-    width: fit-content; // убираем фиксированную ширину
+    width: fit-content;
     max-width: 140px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   }
 }
 
-// Стили для всплывающих подсказок (popper)
-:deep(.v-popper__inner) {
-  background: rgba(15, 15, 20, 0.95);
-  color: #f0f0f0;
-  font-family: 'Fira Code', monospace;
-  font-size: 13px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
-  max-width: 240px;
-  white-space: pre-wrap;
-  line-height: 1.4;
-  pointer-events: none;
-  user-select: none;
-}
-
-:deep(.v-popper__arrow-container) {
-  display: none;
-}
-
-// Кнопки действий с предметом
+/* Кнопки */
 .use-button {
   background-color: #15ce90bd;
   color: white;
@@ -267,6 +280,7 @@ body {
   }
 }
 </style>
+
 
 
 

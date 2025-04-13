@@ -102,7 +102,7 @@ onMounted(() => {
   }
 
   .active {
-    background: rgb(153, 12, 235);
+    background: linear-gradient(90deg, #00ffccbe, #9900ffc7);
     color: white;
   }
 }
@@ -121,6 +121,7 @@ onMounted(() => {
   background: rgba(0, 0, 0, 0.555);
   padding: 20px;
   border-radius: 10px;
+  border: 1px solid rgb(0, 0, 0);
   margin-bottom: 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.651);
   color: white;
@@ -153,6 +154,7 @@ onMounted(() => {
 
     &:hover {
       color: rgb(153, 0, 255);
+      
     }
   }
 }
@@ -199,7 +201,6 @@ onMounted(() => {
   color: white;
   border: 1px solid rgba(200, 200, 200, 0.3);
 }
-
 
 </style>
   

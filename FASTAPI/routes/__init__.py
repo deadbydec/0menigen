@@ -19,8 +19,12 @@ from .toilet_doom import router as toilet_doom_router
 from .admin import router as admin_router
 from .donateshop import router as donateshop_router
 from .landfill import router as landfill_router
+from .playershop import router as playershop_router
+from .safe import router as safe_router
 
 __all__ = [
+    "safe_router",
+    "playershop_router",
     "landfill_router",
     "donateshop_router",
     "admin_router",

@@ -111,7 +111,7 @@ async def add_products_to_db(db: AsyncSession):
             image=data["image"],
             rarity=rarity_map[data["rarity"]],
             product_type=type_map[data["product_type"]],
-            stock=10
+            stock=0
         )
         db.add(product)
 
@@ -123,6 +123,15 @@ async def reset_stock(db: AsyncSession):
     result = await db.execute(select(Product))
     products = result.scalars().all()
     for product in products:
-        product.stock = 10
+        if product.rarity not in {
+            ProductRarity.trash,
+            ProductRarity.common,
+            ProductRarity.rare,
+            ProductRarity.epic,
+            ProductRarity.legendary,
+            ProductRarity.elder
+        }:
+            continue  # защищаем магазинные
+        product.stock = 0  # или вообще пропускаем
     await db.commit()
-    print("✅ Запасы товаров обновлены!")
+    print("✅ (safe) Reset stock завершён")

@@ -1,22 +1,60 @@
 <script setup>
 import { useAuthStore } from "@/store/auth";
 import { useInboxStore } from "@/store/inbox";
+import { ref } from "vue"
+import { useRouter } from "vue-router"
 import InboxModal from "@/components/inbox/InboxModal.vue";
+
+const mouseX = ref(0)
+const mouseY = ref(0)
+
+const parallaxStyle = computed(() => {
+  const maxShift = 30 // максимум смещения в px
+  const x = ((mouseX.value - window.innerWidth / 2) / window.innerWidth) * maxShift
+  const y = ((mouseY.value - window.innerHeight / 2) / window.innerHeight) * maxShift
+  return {
+    transform: `translate(${x}px, ${y}px)`
+  }
+})
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('mousemove', (e) => {
+    mouseX.value = e.clientX
+    mouseY.value = e.clientY
+  })
+}
 
 const inboxStore = useInboxStore();
 const authStore = useAuthStore();
 
-function logout() {
-  authStore.logout();
-}
 
 function login() {
   console.log("Login clicked"); // Дебаг
   authStore.login("дырбулщищ", "898939"); // 🚪 прямой вход
 }
+
+const router = useRouter()
+const profileHovering = ref(false)
+const shopHovering = ref(false)
+const eventsHovering = ref(false)
+const socialHovering = ref(false)
+const lentaHovering = ref(false)
+const gamesHovering = ref(false)
+const rankHovering = ref(false)
+
+function goTo(path) {
+  router.push(path)
+  hovering.value = false
+}
+
+function logout() {
+  authStore.logout()
+  hovering.value = false
+}
 </script>
 
 <template>
+  <div class="bg-parallax" :style="parallaxStyle"></div>
   <div class="layout">
     <!-- 🔥 Шапка с навигацией -->
     <header>
@@ -26,22 +64,117 @@ function login() {
 
           <!-- Проверка авторизации -->
           <template v-if="authStore.isAuthenticated">
-            <li><router-link to="/news"><font-awesome-icon :icon="['fas', 'newspaper']" /></router-link></li>
-            <li><router-link to="/profile"><font-awesome-icon :icon="['fas', 'user']" /></router-link></li>
-            <li><router-link to="/inventory"><font-awesome-icon :icon="['fas', 'box']" /></router-link></li>
-            <li><router-link to="/events"><font-awesome-icon :icon="['fas', 'compass']" /></router-link></li>
-            <li><router-link to="/games"><font-awesome-icon :icon="['fas', 'gamepad']" /></router-link></li>
-            <li><router-link to="/rangs"><font-awesome-icon :icon="['fas', 'trophy']" /></router-link></li>
-            <li><router-link to="/mall"><font-awesome-icon :icon="['fas', 'store']" /></router-link></li>
-            <li><router-link to="/forum"><font-awesome-icon :icon="['fas', 'comments']" /></router-link></li>
-            <li><router-link to="/players"><font-awesome-icon :icon="['fas', 'users']" /></router-link></li>
+            <li class="profile-dropdown" @mouseenter="lentaHovering = true" @mouseleave="lentaHovering = false">
+  <button class="p-2 text-white hover:text-purple-300 transition">
+    <font-awesome-icon :icon="['fas', 'rss']" />
+  </button>
+
+  <!-- ВЫПАДАЮЩЕЕ МЕНЮ -->
+  <div v-if="lentaHovering" class="dropdown-menu">
+    <ul>
+      <li @click="goTo('/news')">Новости</li>
+      <li @click="goTo('/about')">Об игре</li>
+    </ul>
+  </div>
+</li>
+            <!-- ОБЁРТКА ДЛЯ ИКОНКИ ПРОФИЛЯ С МЕНЮ -->
+
+            <li class="profile-dropdown" @mouseenter="profileHovering = true" @mouseleave="profileHovering = false">
+  <button class="p-2 text-white hover:text-purple-300 transition">
+    <font-awesome-icon :icon="['fas', 'id-card']" />
+  </button>
+
+  <!-- ВЫПАДАЮЩЕЕ МЕНЮ -->
+  <div v-if="profileHovering" class="dropdown-menu">
+    <ul>
+      <li @click="goTo('/profile')">Профиль</li>
+      <li @click="goTo('/personalshop')">Личный магазин</li>
+      <li @click="goTo('/inventory')">Инвентарь</li>
+      <li @click="goTo('/safe')">Сейф</li>
+      <li @click="goTo('/toilet')">Мой туалет</li>
+      <li @click="logout">Выйти</li>
+    </ul>
+  </div>
+</li>
+
+<li class="profile-dropdown" @mouseenter="eventsHovering = true" @mouseleave="eventsHovering = false">
+  <button class="p-2 text-white hover:text-purple-300 transition">
+    <font-awesome-icon :icon="['fas', 'compass']" />
+  </button>
+
+  <!-- ВЫПАДАЮЩЕЕ МЕНЮ -->
+  <div v-if="eventsHovering" class="dropdown-menu">
+    <ul>
+      <li @click="goTo('/events')">Интересные места</li>
+      <li @click="goTo('/events/season')">Сезонные события</li>
+    </ul>
+  </div>
+</li>
+
+
+<li class="profile-dropdown" @mouseenter="gamesHovering = true" @mouseleave="gamesHovering = false">
+  <button class="p-2 text-white hover:text-purple-300 transition">
+    <font-awesome-icon :icon="['fas', 'dice']" />
+  </button>
+
+  <!-- ВЫПАДАЮЩЕЕ МЕНЮ -->
+  <div v-if="gamesHovering" class="dropdown-menu">
+    <ul>
+      <li @click="goTo('/games')">Мини-игры</li>
+      <li @click="goTo('/lottery')">Лотерея</li>
+    </ul>
+  </div>
+</li>
+
+<li class="profile-dropdown" @mouseenter="rankHovering = true" @mouseleave="rankHovering = false">
+  <button class="p-2 text-white hover:text-purple-300 transition">
+    <font-awesome-icon :icon="['fas', 'trophy']" />
+  </button>
+
+  <!-- ВЫПАДАЮЩЕЕ МЕНЮ -->
+  <div v-if="rankHovering" class="dropdown-menu">
+    <ul>
+      <li @click="goTo('/rangs')">Рейтинги</li>
+      <li @click="goTo('/records')">Рекорды</li>
+      <li @click="goTo('/comingsoon')">Конкурсы</li>
+    </ul>
+  </div>
+</li>
+            <!-- ОБЁРТКА ДЛЯ ИКОНКИ МАГАЗИНА С МЕНЮ -->
+<li class="profile-dropdown" @mouseenter="shopHovering = true" @mouseleave="shopHovering = false">
+  <button class="p-2 text-white hover:text-purple-300 transition">
+    <font-awesome-icon :icon="['fas', 'store']" />
+  </button>
+
+  <!-- ВЫПАДАЮЩЕЕ МЕНЮ -->
+  <div v-if="shopHovering" class="dropdown-menu">
+    <ul>
+      <li @click="goTo('/mall')">Торговый центр</li>
+      <li @click="goTo('/shopsearch')">Поиск товаров</li>
+      <li @click="goTo('/vip_shop')">VIP-шоппинг</li>
+    </ul>
+  </div>
+</li>
+<li class="profile-dropdown" @mouseenter="socialHovering = true" @mouseleave="socialHovering = false">
+  <button class="p-2 text-white hover:text-purple-300 transition">
+    <font-awesome-icon :icon="['fas', 'poo']" />
+  </button>
+
+  <!-- ВЫПАДАЮЩЕЕ МЕНЮ -->
+  <div v-if="socialHovering" class="dropdown-menu">
+    <ul>
+      <li @click="goTo('/forum')">Игровой форум</li>
+      <li @click="goTo('/clans')">Кланы</li>
+      <li @click="goTo('/players')">Поиск игроков</li>
+      <li @click="goTo('/toilet/public')">Туалеты</li>
+    </ul>
+  </div>
+</li>
             <!-- 🔥 Фиксим кнопку "Личные сообщения" -->
-            <li><button @click="inboxStore.openModal()"><font-awesome-icon :icon="['fas', 'inbox']" /></button></li>            
-            <li><button @click="logout"><font-awesome-icon :icon="['fas', 'sign-out-alt']" /></button></li>
+            <li><button @click="inboxStore.openModal()"><font-awesome-icon :icon="['fas', 'envelope']" /></button></li>            
           </template>
             
           
-          <li v-if="authStore.isAuthenticated">Привет, {{ authStore.user }}!</li>
           <!-- Если не авторизован -->
           
           
@@ -72,6 +205,22 @@ function login() {
 
 
 <style lang="scss">
+
+.bg-parallax {
+  position: fixed;
+  top: -50px;
+  left: -50px;
+  width: calc(100vw + 100px);
+  height: calc(100vh + 100px);
+  background: url('/images/blackhole3.jpg') no-repeat center center;
+  background-size: cover;
+  z-index: -1;
+  transition: transform 0.4s ease-out;
+  pointer-events: none;
+  will-change: transform;
+  overflow: hidden;
+}
+
 html, body {
     margin: 0;
     padding: 0;
@@ -85,7 +234,6 @@ html, body {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    background: url('/images/wasteland1.jpg') no-repeat center center fixed;
     background-size: cover;
   }
   
@@ -138,6 +286,7 @@ html, body {
           
           &:hover {
             opacity: 0.8;
+            background-color: transparent;
             transform: scale(1.1);
           }
         }
@@ -161,6 +310,44 @@ html, body {
     padding-top: 60px;
     padding-bottom: 40px;
   }
+
+  .profile-dropdown {
+  position: relative;
+
+  .dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.425);
+    color: white;
+    padding: 8px 0;
+    border-radius: 8px;
+    border: 1px solid rgb(0, 0, 0);
+    min-width: 180px;
+    text-align: left;
+    z-index: 9999;
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+
+    ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+
+      li {
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        white-space: nowrap;
+
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+      }
+    }
+  }
+}
 </style>
 
 

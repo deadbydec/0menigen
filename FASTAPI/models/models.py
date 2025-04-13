@@ -82,8 +82,11 @@ class User(Base):
     last_login = Column(TIMESTAMP(timezone=True), default=func.now(), onupdate=func.now())
     vip_status = Column(SqlEnum(VipStatus, name="vip_status"), default=VipStatus.NONE, nullable=False)
     race_id = Column(Integer, ForeignKey('races.id'), nullable=True)  # Ссылка на расу
-    race = relationship("Race", backref="players")  # Связь с расой
+    shop_balance = Column(Integer, default=0)
+    vault_balance = Column(Integer, default=0)  # Монеты в сейфе
+    role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
     
+    race = relationship("Race", backref="players")  # Связь с расой
     toilet_doom = relationship("ToiletDoom", back_populates="user", uselist=False, cascade="all, delete-orphan")
     wall_posts = relationship("WallPost", back_populates="user", lazy="selectin")
     sent_gifts = relationship("PendingGift", foreign_keys="[PendingGift.sender_id]", back_populates="sender")
@@ -93,10 +96,11 @@ class User(Base):
     received_friend_requests = relationship("Friendship", foreign_keys="[Friendship.friend_id]", back_populates="friend")
     system_messages = relationship("SystemMessage", back_populates="recipient")
     wall_posts = relationship("WallPost", back_populates="user", cascade="all, delete-orphan")
-    role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
     role = relationship("Role", back_populates="users")
     landfill_pickups = relationship("LandfillPickupLimit", back_populates="user", cascade="all, delete-orphan")
     thrown_items = relationship("LandfillItem", back_populates="thrown_by", cascade="all, delete-orphan")
+    shop_items = relationship("PersonalShopItem", back_populates="user", cascade="all, delete")
+    vault_items = relationship("VaultItem", back_populates="user", cascade="all, delete-orphan")
 
     def get_xp_to_next_level(self) -> int:
         return 100 + (self.level * 20)
@@ -433,6 +437,8 @@ class Product(Base):
 
 
     items = relationship('InventoryItem', back_populates='product', cascade="all, delete-orphan")
+    shop_entries = relationship("PersonalShopItem", back_populates="product", cascade="all, delete")
+
 
     def __repr__(self):
         return f"<Product {self.name}, Type: {self.product_type.value}, Rarity: {self.rarity.value}>"
@@ -570,7 +576,7 @@ class PendingGift(Base):
     sender_id = Column(Integer, ForeignKey("user.id"))
     recipient_id = Column(Integer, ForeignKey("user.id"))
     item_id = Column(Integer, ForeignKey("user_inventory.id"))
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     sender = relationship("User", foreign_keys=[sender_id], back_populates="sent_gifts")
     recipient = relationship("User", foreign_keys=[recipient_id], back_populates="received_gifts")
@@ -583,7 +589,7 @@ class TokenBlocklist(Base):
     __tablename__ = "token_bl"
     id = Column(Integer, primary_key=True)
     jti = Column(String(36), nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 # 🔥 ДОБАВЛЯЕМ ФУНКЦИЮ ДЛЯ СОЗДАНИЯ ТАБЛИЦ В БАЗЕ
 async def init_db():
@@ -597,7 +603,7 @@ class ToiletDoom(Base):
     user_id = Column(Integer, ForeignKey("user.id"), unique=True)
 
     clean = Column(Boolean, default=True)
-    last_visit = Column(DateTime, default=datetime.utcnow)
+    last_visit = Column(DateTime, default=datetime.now(timezone.utc))
     like_count = Column(Integer, default=0)
     dislike_count = Column(Integer, default=0)
     decor = Column(JSON, default={})  # хранит украшения
@@ -620,7 +626,7 @@ class ToiletVote(Base):
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     target_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     vote_type = Column(String(10), nullable=False)  # 'like' or 'dislike'
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class LandfillItem(Base):
     __tablename__ = "landfill_items"
@@ -629,7 +635,7 @@ class LandfillItem(Base):
     product_id = Column(Integer, ForeignKey('products.id'), nullable=False)
     quantity = Column(Integer, default=1)
     thrown_by_id = Column(Integer, ForeignKey("user.id"), nullable=True)
-    thrown_at = Column(DateTime, default=datetime.utcnow)
+    thrown_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     product = relationship("Product")
     thrown_by = relationship("User", back_populates="thrown_items")
@@ -650,7 +656,7 @@ class UserLibrary(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
-    added_at = Column(DateTime, default=datetime.utcnow)
+    added_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", backref="library_books")
     product = relationship("Product")
@@ -691,7 +697,7 @@ class UserCollectionItem(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
-    added_at = Column(DateTime, default=datetime.utcnow)
+    added_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", backref="collected_items")
     product = relationship("Product")
@@ -729,7 +735,7 @@ class UserActivity(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     activity_id = Column(Integer, ForeignKey("activities.id"), nullable=False)
-    completed_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", backref="activity_log")
     activity = relationship("Activity")
@@ -780,9 +786,51 @@ class Match3Score(Base):
     coins_earned = Column(Integer)
     xp_earned = Column(Integer)
     is_rewarded = Column(Boolean, default=False)
-    submitted_at = Column(DateTime, default=datetime.utcnow)
+    submitted_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", backref="match3_scores")
 
 
+class PersonalShopItem(Base):
+    __tablename__ = "personal_shop_items"
 
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id"))
+    product_id = Column(Integer, ForeignKey("products.id"))
+    price = Column(Integer, nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    is_published = Column(Boolean, default=False)
+
+    user = relationship("User", back_populates="shop_items")
+    product = relationship("Product", back_populates="shop_entries")
+
+
+class ShopTransaction(Base):
+    __tablename__ = "shop_transactions"
+
+    id = Column(Integer, primary_key=True)
+    seller_id = Column(Integer, ForeignKey("user.id"))
+    buyer_id = Column(Integer, ForeignKey("user.id"))
+    product_id = Column(Integer, ForeignKey("products.id"))
+    quantity = Column(Integer, nullable=False)
+    price_per_unit = Column(Integer, nullable=False)
+    total_price = Column(Integer, nullable=False)
+    timestamp = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    seller = relationship("User", foreign_keys=[seller_id])
+    buyer = relationship("User", foreign_keys=[buyer_id])
+    product = relationship("Product")
+
+
+class VaultItem(Base):
+    __tablename__ = "vault_items"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id"))
+    product_id = Column(Integer, ForeignKey("products.id"))
+    quantity = Column(Integer, default=1)
+    is_favorite = Column(Boolean, default=False)  # <-- новенькое поле
+
+    user = relationship("User", back_populates="vault_items")
+    product = relationship("Product")

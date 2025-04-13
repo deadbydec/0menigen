@@ -67,6 +67,7 @@ async def get_player_data(user_id: int, db: AsyncSession) -> dict | None:
         "lastIps": user.last_ips,
         "birthdate": user.birthdate.isoformat() if user.birthdate else None,
         "email": user.email,
+        "vault_balance": user.vault_balance,
     }
 
 @router.get("/public/{user_id}")

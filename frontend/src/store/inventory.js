@@ -23,7 +23,7 @@ export const useInventoryStore = defineStore("inventory", () => {
         withCredentials: true,
         headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
       });
-      inventory.value = response.data.inventory || [];
+      inventory.value = (response.data.inventory || []).filter(item => item.quantity > 0);
       userRace.value = response.data.user_race || ""; // Сохраняем расу пользователя
     } catch (error) {
       console.error("Ошибка загрузки инвентаря:", error);
@@ -98,6 +98,35 @@ export const useInventoryStore = defineStore("inventory", () => {
     }
   };
 
+  const sendToVault = async (itemId, quantity = 1) => {
+    try {
+      const payload = {
+        item_id: itemId,
+        quantity: quantity
+      };
+  
+      const res = await api.post('/safe/vault/deposit-item', payload, {
+        withCredentials: true,
+        headers: { "X-CSRF-TOKEN": csrfToken }
+      });
+  
+      toastStore.addToast(res.data.message, { type: 'success' });
+      await fetchInventory();
+      selectedItem.value = null;
+      return res.data;
+  
+    } catch (error) {
+      console.error("Ошибка при перемещении в сейф:", error);
+      const msg = error.response?.data?.detail || "Ошибка: не удалось убрать предмет в сейф.";
+      toastStore.addToast(msg, { type: 'error' });
+      throw error;
+    }
+  };
+  
+  
+  
+  
+
 
   // Выбор предмета
   const selectItem = (item) => {
@@ -114,6 +143,7 @@ export const useInventoryStore = defineStore("inventory", () => {
     fetchInventory,
     useItem,
     recycleItem,
+    sendToVault,
     destroyItem,
     selectItem
   };

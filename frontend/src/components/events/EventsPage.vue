@@ -44,10 +44,11 @@
   <style scoped>
   .card {
   width: 100%;
+  border: 1px solid rgb(0, 0, 0);
   height: 290px;           /* Зафиксировали высоту карточки */
   max-height: 290px;
   display: block;
-  background: #2d2d2d;
+  background: #0000009a;
   border-radius: 0.90rem;
   overflow: hidden;
   text-align: center;

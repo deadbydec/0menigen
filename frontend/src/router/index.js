@@ -32,6 +32,9 @@ import EventsPage from "@/components/events/EventsPage.vue";
 import LandfillPage from '@/components/events/LandfillPage.vue';
 import BlackMarket from '@/components/events/BlackMarket.vue';
 import VoidGate from '@/components/events/VoidGate.vue';
+import PersonalShop from '@/components/usershop/PersonalShop.vue';
+import ShopSearch from '@/components/usershop/ShopSearch.vue';
+import UserSafe from '@/components/UserSafe.vue';
 
 
 
@@ -54,6 +57,10 @@ const routes = [
       { path: '/blackmarket', component: BlackMarket, meta: { requiresAuth: true } },
       { path: '/voidgate', component: VoidGate, meta: { requiresAuth: true } },
       { path: "players", component: PlayersSearch, meta: { requiresAuth: true } },
+
+      { path: "personalshop", component: PersonalShop, meta: { requiresAuth: true } },
+      { path: "shopsearch", component: ShopSearch, meta: { requiresAuth: true } },
+      { path: "safe", component: UserSafe, meta: { requiresAuth: true } },
       
       { path: "mall", component: MallPage, meta: { requiresAuth: true } },
       { path: "mall/:category", component: ShopPage, meta: { requiresAuth: true }, props: true },

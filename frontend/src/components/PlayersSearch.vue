@@ -1,14 +1,17 @@
 <script setup>
 import { ref, onMounted, watch } from "vue";
+import { useRouter } from "vue-router";
 import api from "@/utils/axios";
+
+const router = useRouter()
 
 const players = ref([]);
 const searchQuery = ref("");
 const filter = ref("all"); // "all" или "online"
-const loading = ref(false); // ✅ ФИКС: Добавили `loading`
+const loading = ref(false);
 
 async function fetchPlayers() {
-  loading.value = true; // ✅ Включаем индикатор загрузки
+  loading.value = true;
   try {
     console.log("🔄 Запрос списка игроков...");
     const response = await api.get(`/players/?filter=${filter.value}&search=${searchQuery.value}`);
@@ -17,11 +20,11 @@ async function fetchPlayers() {
   } catch (error) {
     console.error("❌ Ошибка загрузки списка игроков:", error);
   } finally {
-    loading.value = false; // ✅ Выключаем загрузку
+    loading.value = false;
   }
 }
 
-onMounted(fetchPlayers); // ✅ Загружаем при открытии
+onMounted(fetchPlayers);
 
 function getAvatarUrl(avatarPath) {
   if (!avatarPath) {
@@ -30,13 +33,16 @@ function getAvatarUrl(avatarPath) {
   return `https://localhost:5002${avatarPath}?t=${Date.now()}`;
 }
 
-// ✅ Обновляем список при изменении фильтра или строки поиска
+function goToProfile(playerId) {
+  router.push(`/profile/${playerId}`);
+}
+
 watch([searchQuery, filter], fetchPlayers);
 </script>
 
 <template>
   <div class="players-container">
-    <h2>🔍 Поиск игроков</h2>
+    <h2>Поиск игроков</h2>
 
     <div class="search-bar">
       <input v-model="searchQuery" placeholder="Введите ник..." />
@@ -49,10 +55,15 @@ watch([searchQuery, filter], fetchPlayers);
     <div v-if="loading" class="loading">Загрузка...</div>
 
     <ul v-else class="players-list">
-      <li v-for="player in players" :key="player.id" class="player-card">
+      <li
+        v-for="player in players"
+        :key="player.id"
+        class="player-card"
+        @click="goToProfile(player.id)"
+      >
         <img :src="getAvatarUrl(player.avatar)" class="avatar" />
-        <div>
-          <h3 class="username"><router-link :to="`/profile/${player.id}`">{{ player.username }}</router-link></h3>
+        <div class="card-content">
+          <h3 class="username">{{ player.username }}</h3>
           <span :class="{ online: player.status === 'online', offline: player.status === 'offline' }">
             {{ player.status === "online" ? "🟢 Онлайн" : "🔴 Офлайн" }}
           </span>
@@ -66,66 +77,108 @@ watch([searchQuery, filter], fetchPlayers);
   </div>
 </template>
 
-<style scoped>
-
-
+<style scoped lang="scss">
 .players-container {
-  background: rgba(0, 0, 0, 0.623);
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
+  border: 1px solid rgb(0, 0, 0);
+  color: #fff;
+  padding: 1rem;
+  background-color: rgba(0, 0, 0, 0.4);  // полупрозрачный фон
+  backdrop-filter: blur(6px);
+  border-radius: 8px;
+  max-width: 600px;
+  margin: 0 auto;
+  box-shadow: 0 0 15px rgba(0,0,0,0.4);
 
-.search-bar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-}
+  h2 {
+    margin-bottom: 1rem;
+    font-size: 1.4rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  }
 
-.search-bar input, .search-bar select {
-  padding: 8px;
-  font-size: 16px;
-  border-radius: 5px;
-  border: none;
-}
+  .search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
 
-.players-list {
-  list-style: none;
-  padding: 0;
-}
+    input, select {
+      width: 100%;
+      max-width: 200px;
+      padding: 0.6rem;
+      border: 1px solid rgba(255,255,255,0.2);
+      background-color: rgba(255,255,255,0.1);
+      color: #fff;
+      border-radius: 4px;
+      transition: border-color 0.2s ease;
 
-.player-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
+      &:focus {
+        outline: none;
+        border-color: rgba(255,255,255,0.4);
+        background-color: rgba(255,255,255,0.15);
+      }
+    }
+  }
 
-  border-radius: 5px;
-  margin-bottom: 10px;
-}
+  .loading {
+    text-align: center;
+    margin-top: 20px;
+  }
 
-.player-card img {
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  object-fit: cover;
-}
+  .players-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
 
-.username {
-  color: bisque;
+    .player-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.8rem;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.3); // тонкий белый бордер
+      border-radius: 6px;
+      transition: background-color 0.2s ease, border-color 0.2s ease;
 
-}
+      &:hover {
+        background-color: rgba(255,255,255,0.08);
+        border-color: rgba(255,255,255,0.5);
+      }
 
-.online {
-  color: rgb(79, 238, 79);
-}
+      .avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: 0 0 4px rgba(0,0,0,0.5);
+      }
 
-.offline {
-  color: rgb(88, 88, 88);
-}
+      .card-content {
+        display: flex;
+        flex-direction: column;
 
-.loading, .no-results {
-  text-align: center;
-  margin-top: 20px;
+        .username {
+          font-size: 1rem;
+          margin: 0 0 4px;
+          white-space: nowrap;
+        }
+      }
+    }
+  }
+
+  .online {
+    color: #4fee4f;
+  }
+
+  .offline {
+    color: rgb(88, 88, 88);
+  }
+
+  .no-results {
+    text-align: center;
+    margin-top: 20px;
+    font-style: italic;
+  }
 }
 </style>
+
