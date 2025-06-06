@@ -1,11 +1,12 @@
 
+
+
 /* Основной контейнер */
 .auth-container {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh; // Убираем лишнюю высоту
-  background: rgba(0, 0, 0, 0.8);
   position: fixed; // Фиксируем на экране
   width: 100%;
 }
@@ -40,13 +41,13 @@ h2 {
     margin: 6px 0;
     border: 1px solid  rgba(255, 255, 255, 0.2);
     background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    color: #ffffffd0;
     border-radius: 5px;
     font-size: 14px;
     transition: border 0.3s ease;
 
     &:focus {
-      border-color: #ff5252; // Красный при наведении
+      border-color: #7008c5; // Красный при наведении
       outline: none;
     }
   }
@@ -54,8 +55,8 @@ h2 {
 
 /* Кнопки */
 button {
-  width: 85%; // Делаем кнопку по ширине полей
-  background: #d32f2f; // Основной красный
+  width: 45%; // Делаем кнопку по ширине полей
+  background: #7008c5;
   color: #fff;
   border: none;
   padding: 10px;
@@ -66,7 +67,7 @@ button {
   transition: all 0.3s ease-in-out;
 
   &:hover {
-    background: #ff5252; // Красный при наведении
+    background: #00000041; // Красный при наведении
     transform: scale(1.05);
   }
 }
@@ -78,7 +79,7 @@ button {
   button {
     background: transparent;
     border: none;
-    color: #ff5252; // Красный при наведении
+    color: #ffffff; // Красный при наведении
     font-size: 13px;
     cursor: pointer;
     transition: 0.3s;
@@ -104,4 +105,6 @@ button {
     opacity: 1;
     transform: translateY(0);
   }
+
+  
 }

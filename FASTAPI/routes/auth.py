@@ -13,6 +13,8 @@ from models.models import async_session as _async_session, User, InventoryItem, 
 import json
 from config import Settings, settings
 from database import get_db
+from utils.confirm_email import send_confirmation_email
+
 
 jwt_access = JwtAccessBearer(secret_key="supersecretkey", auto_error=True)
 
@@ -83,7 +85,7 @@ async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
         # 🎁 Выдача предметов
         starter_names = [
     "Ржавый ключ от реальности",
-    "Глитч-напиток «УГАР»",
+    "Энергофлекс",
     "Потрёпанная памятка новичку"
 ]
         result = await db.execute(select(Product).where(Product.name.in_(starter_names)))
@@ -100,8 +102,15 @@ async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
             )
             db.add(item)
 
+            # ✉️ Отправка письма с подтверждением
+        #await send_confirmation_email(
+            #user=new_user,
+            #db=db,
+            #base_url="https://localhost:5002/api"  # ← или твой внешний адрес позже
+        #)
+
         await db.commit()  # ✅ Один раз — если всё прошло успешно
-        return {"message": "Регистрация успешна! Теперь можно войти."}
+        return {"message": "Регистрация успешна! Подтвердите email перед входом."}
 
     except Exception as e:
         await db.rollback()  # ❌ Откат, если что-то пошло не так
@@ -162,18 +171,21 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
 
 # ✅ Логаут (ревокация токена)
 @router.post("/logout")
-async def logout(response: Response, request: Request):
-    token = request.cookies.get("access_token_cookie")  # 🧐 Проверяем, есть ли кука
-    response.delete_cookie("access_token_cookie")
-    response.delete_cookie("csrf_access_token")
-    
-    if not token:
-        return {"message": "🛑 Токен уже пустой. Зачем ты здесь?"}
-    
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
+async def logout():
+    resp = JSONResponse({"msg": "logged out"})
+    # при логине ты ставишь secure=True, samesite="None"
+    resp.delete_cookie(
+        "access_token_cookie",
+        secure=True,
+        samesite="None",
+        path="/",               # такие же!
+    )
+    resp.delete_cookie(
+        "csrf_access_token",
+        secure=True,
+        samesite="None",
+        path="/",
+    )
+    return resp
 
-    
-    return RedirectResponse(url="/login", status_code=302)
 

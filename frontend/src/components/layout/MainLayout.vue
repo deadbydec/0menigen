@@ -1,12 +1,14 @@
 <script setup>
 import { useAuthStore } from "@/store/auth";
 import { useInboxStore } from "@/store/inbox";
-import { ref } from "vue"
+import { ref, computed } from "vue"
 import { useRouter } from "vue-router"
 import InboxModal from "@/components/inbox/InboxModal.vue";
+import { usePlayerStore } from "@/store/player";
 
 const mouseX = ref(0)
 const mouseY = ref(0)
+const playerStore = usePlayerStore();
 
 const parallaxStyle = computed(() => {
   const maxShift = 30 // максимум смещения в px
@@ -28,11 +30,6 @@ const inboxStore = useInboxStore();
 const authStore = useAuthStore();
 
 
-function login() {
-  console.log("Login clicked"); // Дебаг
-  authStore.login("дырбулщищ", "898939"); // 🚪 прямой вход
-}
-
 const router = useRouter()
 const profileHovering = ref(false)
 const shopHovering = ref(false)
@@ -41,16 +38,30 @@ const socialHovering = ref(false)
 const lentaHovering = ref(false)
 const gamesHovering = ref(false)
 const rankHovering = ref(false)
+const petsHovering = ref(false)
+const wardrobeHovering = ref(false)
 
 function goTo(path) {
   router.push(path)
   hovering.value = false
 }
 
-function logout() {
-  authStore.logout()
-  hovering.value = false
+const logout = async () => {
+  try {
+    await authStore.logout(); // куки на бэке удаляются
+  } catch (e) {
+    console.error("❌ Ошибка при выходе", e);
+  } finally {
+    playerStore.$reset();
+    authStore.user = null;
+
+    // 💥 имитируем F5 + отправляем на логин
+    window.location.href = "/login"; // это ПОЛНОСТЬЮ перезагружает всё
+  }
 }
+
+
+
 </script>
 
 <template>
@@ -93,6 +104,33 @@ function logout() {
       <li @click="goTo('/safe')">Сейф</li>
       <li @click="goTo('/toilet')">Мой туалет</li>
       <li @click="logout">Выйти</li>
+    </ul>
+  </div>
+</li>
+
+<li class="profile-dropdown" @mouseenter="petsHovering = true" @mouseleave="petsHovering = false">
+  <button class="p-2 text-white hover:text-purple-300 transition">
+    <font-awesome-icon :icon="['fas', 'paw']" />
+  </button>
+
+  <!-- ВЫПАДАЮЩЕЕ МЕНЮ -->
+  <div v-if="petsHovering" class="dropdown-menu">
+    <ul>
+      <li @click="goTo('/mypets')">Мои петы</li>
+      <li @click="goTo('/shelter')">Приют</li>
+    </ul>
+  </div>
+</li>
+
+<li class="profile-dropdown" @mouseenter="wardrobeHovering = true" @mouseleave="wardrobeHovering = false">
+  <button class="p-2 text-white hover:text-purple-300 transition">
+    <font-awesome-icon :icon="['fas', 'hat-wizard']" />
+  </button>
+
+  <!-- ВЫПАДАЮЩЕЕ МЕНЮ -->
+  <div v-if="wardrobeHovering" class="dropdown-menu">
+    <ul>
+      <li @click="goTo('/wardrobe')">Гардероб</li>
     </ul>
   </div>
 </li>
@@ -197,7 +235,7 @@ function logout() {
 
     <!-- 🔥 Футер -->
     <footer>
-      <p>&copy; 2024 OmezhekNet. Все права защищены.</p>
+      <p>&copy; 2025 Omenigen. Все права защищены.</p>
     </footer>
   </div>
 </template>
@@ -212,8 +250,8 @@ function logout() {
   left: -50px;
   width: calc(100vw + 100px);
   height: calc(100vh + 100px);
-  background: url('/images/blackhole3.jpg') no-repeat center center;
-  background-size: cover;
+  background: url('/images/purple_art.jpg') no-repeat center center;
+  background-size: contain;
   z-index: -1;
   transition: transform 0.4s ease-out;
   pointer-events: none;
@@ -238,12 +276,15 @@ html, body {
   }
   
   header, footer {
-    background-color: rgba(0, 0, 0, 0.459);
+    background:linear-gradient(80deg, rgba(38, 32, 39, 0.842), #4d8580d7, rgba(38, 32, 39, 0.842));
     color: white;
+    backdrop-filter: blur(7px);
+    border: 1px solid #000;
     padding: 6px 0;
     text-align: center;
     width: 100%;
     position: fixed;
+    font-family: 'JetBrains Mono', monospace;
     left: 0;
     z-index: 1000;
   }
@@ -299,7 +340,7 @@ html, body {
     flex: 1;
     padding: 30px;
     color: white;
-    font-family: Arial, sans-serif;
+    font-family: 'JetBrains Mono', monospace;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -316,19 +357,18 @@ html, body {
 
   .dropdown-menu {
     position: absolute;
-    top: 100%;
+    top: 110%;
     left: 50%;
     transform: translateX(-50%);
-    background-color: rgba(0, 0, 0, 0.425);
+    background:linear-gradient(80deg,rgba(38, 32, 39, 0.877), #4d8580e3);
     color: white;
-    padding: 8px 0;
-    border-radius: 8px;
+    padding: 6px 4;
+    border-radius: 9px;
     border: 1px solid rgb(0, 0, 0);
     min-width: 180px;
     text-align: left;
     z-index: 9999;
-    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(7px);
 
     ul {
       list-style: none;
@@ -343,6 +383,7 @@ html, body {
 
         &:hover {
           background-color: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
         }
       }
     }

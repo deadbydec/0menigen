@@ -1,5 +1,5 @@
 <template>
-  <div v-if="player && $route.path !== '/profile'" class="player-info">
+  <div v-if="player && !['/profile', '/wardrobe'].includes($route.path)" class="player-info">
     
     
     
@@ -29,6 +29,7 @@
         <p class="coins">💰 {{ player.coins || 0 }} монет</p>
         <p class="nullings">🕳 {{ player.nullings !== undefined ? player.nullings : 0.0 }} нуллингов</p>
         <p class="level">Уровень {{ player.level || 1 }} ({{ player.xp || 0 }}/{{ player.nextLevelXp || 100 }})</p>
+      
       </div>
     </div>
   </div>
@@ -102,7 +103,7 @@ onMounted(() => {
   top: 120px;
   right: 130px;
   width: 240px;
-  background: rgba(0, 0, 0, 0.603);
+  background:rgba(38, 32, 39, 0.842);
   border-radius: 14px;
   border: 1px solid rgb(0, 0, 0);
   padding: 15px;
@@ -111,6 +112,7 @@ onMounted(() => {
   align-items: center;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
   overflow: hidden;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .content {
@@ -132,14 +134,15 @@ onMounted(() => {
 /* Кольцо */
 .xp-ring {
   position: absolute;
-  top: -23px;
-  left: -22px;
+  top: -26px;
+  left: -26px;
   /* Масштабируем с 140×140 до 110×110 => ~0.7857 */
-  width: 158px;
-  height: 159px;
+  width: 161px;
+  height: 161px;
   transform: rotate(-90deg) scale(0.79);
   transform-origin: center;
-  z-index: 0;
+  z-index: 2;
+  
 }
 
 .xp-ring .bg {
@@ -150,7 +153,7 @@ onMounted(() => {
 
 .xp-ring .fg {
   fill: none;
-  stroke: #00ffc3;
+  stroke: rgba(18, 230, 184, 0.61);
   stroke-width: 8;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.4s ease;
@@ -166,7 +169,7 @@ onMounted(() => {
   border-radius: 50%;
   object-fit: cover;
   z-index: 1;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+
 }
 
 /* Инфа справа от аватарки */

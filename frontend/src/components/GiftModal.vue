@@ -49,8 +49,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(3px); /* Немного блюра для футуристичного эффекта */
+    backdrop-filter: blur(1px); /* Немного блюра для футуристичного эффекта */
     z-index: 1000;
     animation: fadeInBg 0.3s ease forwards;
   }

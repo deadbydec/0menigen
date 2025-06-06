@@ -1,14 +1,18 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, Body
 from sqlalchemy.orm import Session
+from sqlalchemy import cast, String
 from database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession  # импорт нужного класса
-from models.models import User, Race, GenderEnum
+from sqlalchemy.dialects.postgresql import JSONB
+from models.models import User, Race, GenderEnum, Product, InventoryItem, SystemMessage, SystemMessageType, ProductType
 from sqlalchemy.future import select  # не забудь импорт!
 from auth.cookie_auth import get_current_user_from_cookie, get_token_from_cookie, decode_access_token
 from utils.last_seen import is_user_online, set_user_online
 from pydantic import BaseModel
 from sqlalchemy.orm import selectinload
+from utils.random_event_loader import RANDOM_EVENTS
+from random import random, choice
 
 router = APIRouter(prefix="/api/player", tags=["player"])
 
@@ -25,7 +29,14 @@ async def get_player_info(request: Request, db: Session = Depends(get_db)):
     
     await set_user_online(user.id)
 
-    return await get_player_data(user.id, db)
+    # 💥 Пытаемся вызвать глюк
+    event_result = await maybe_trigger_random_event(user, db)
+    response = await get_player_data(user.id, db)
+
+    if event_result:
+        response["random_event"] = event_result  # 👈 фронт может ловить и показывать
+
+    return response
 
 
 async def get_player_data(user_id: int, db: AsyncSession) -> dict | None:
@@ -152,5 +163,57 @@ async def choose_identity(
     user.birthdate = birth_date_obj
     await db.commit()
 
-    return {"message": f"Раса '{race.display_name}' успешно выбрана! Пол: {gender}, Дата рождения: {birth_date_obj}"}
+    result = await db.execute(
+        select(Product)
+        .where(
+            Product.product_type == ProductType.creature.value,
+            Product.custom.op("->>")("race_code") == race.code
+        )
+    )
+    egg = result.scalar()
+    if not egg:
+        raise HTTPException(status_code=500, detail="Яйцо для этой расы не найдено.")
+    
+    db.add(InventoryItem(user_id=user.id, product_id=egg.id, quantity=1))
+
+    await db.commit()
+    
+    return {
+        "message": f"Раса '{race.display_name}' успешно выбрана! Яйцо добавлено в инвентарь.",
+        "egg": {
+            "name": egg.name,
+            "image": egg.image,
+            "description": egg.description,
+            "rarity": egg.rarity.value
+        }
+    }
+
+
+
+async def maybe_trigger_random_event(user, db):
+    if random() < 0.25:
+        event = choice(RANDOM_EVENTS)
+        reward = event.get("reward", {})
+
+        # Применяем награду
+        if "coins" in reward:
+            user.coins += reward["coins"]
+        if "xp" in reward:
+            await user.add_xp(db, reward["xp"])
+        if "item_id" in reward:
+            product = await db.get(Product, reward["item_id"])
+            if product:
+                db.add(InventoryItem(user_id=user.id, product_id=product.id, quantity=1))
+
+        await db.commit()
+
+        return {
+            "title": event["title"],
+            "description": event["description"],
+            "effect": event.get("effect", ""),
+            "reward": reward
+        }
+
+    return None
+
 

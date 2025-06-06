@@ -1,8 +1,29 @@
+<template>
+  <div class="mall-container">
+    <h1></h1>
+
+    <!-- Убираем ограничение по высоте на shop-list, прокрутка будет по всей странице -->
+    <div class="shop-list">
+      <!-- Генерируем карточки магазинов -->
+      <router-link
+        v-for="shop in shops"
+        :key="shop.category"
+        :to="'/mall/' + shop.category"
+        class="shop-card"
+      >
+        <img :src="shop.img" :alt="shop.name" class="card-img" />
+        <div class="card-content">
+          <h2 class="card-title">{{ shop.name }}</h2>
+          <p class="card-description">{{ shop.description }}</p>
+        </div>
+      </router-link>
+    </div>
+  </div>
+</template>
+
 <script setup>
 import { useRouter } from 'vue-router'
 
-// Можешь хранить пути к локальным картинкам в папке assets,
-// тогда добавляй их так: new URL('@/assets/food-shop.jpg', import.meta.url)
 const shops = [
   {
     name: 'Продуктовый',
@@ -11,16 +32,22 @@ const shops = [
     description: 'Свежие продукты, без просрочки (наверное).'
   },
   {
+    name: '✨Ко$мошоп™',
+    category: 'cosmetic',
+    img: new URL('@/assets/CosmoShop.jpg', import.meta.url),
+    description: 'Стиль вне координат. Надень баг — почувствуй космос.'
+  },
+  {
     name: 'Книжник',
     category: 'books',
     img: new URL('@/assets/BookShop.jpg', import.meta.url),
     description: 'Книги, свитки и древние фолианты для любителей знаний.'
   },
   {
-    name: 'Слив',
-    category: 'toilet',
-    img: new URL('@/assets/toiletshop.jpg', import.meta.url),
-    description: 'От рулонов с философскими цитатами до артефактов для личного туалетного дзена.'
+    name: 'Вивариум',
+    category: 'zoo',
+    img: new URL('@/assets/ZooShop.jpg', import.meta.url),
+    description: 'Твоя плоть не в безопасности. Она уже заинтересовала кое-кого. Выбери себе нового спутника. Он выберет тебя раньше.'
   },
   {
     name: 'Технолайт',
@@ -44,74 +71,62 @@ const shops = [
 
 const router = useRouter()
 
-// Функция, если нужно программно переходить в магазин (не обязательно)
 const enterShop = (route) => {
   router.push(route)
 }
 </script>
 
-<template>
-  <div class="mall-container">
-    <h1></h1>
-
-    <div class="shop-grid">
-      <!-- Генерируем карточки магазинов -->
-      <router-link
-        v-for="shop in shops"
-        :key="shop.category"
-        :to="'/mall/' + shop.category"
-        class="shop-card"
-      >
-        <!-- Картинка магазина -->
-        <img :src="shop.img" :alt="shop.name" class="card-img" />
-
-        <!-- Контент карточки: заголовок + описание -->
-        <div class="card-content">
-          <h2 class="card-title">{{ shop.name }}</h2>
-          <p class="card-description">{{ shop.description }}</p>
-        </div>
-      </router-link>
-    </div>
-  </div>
-</template>
-
 <style scoped>
 .mall-container {
+  transform: scale(0.9);
   text-align: center;
   padding: 20px;
+  height: 100vh; /* Устанавливаем 100% высоты экрана */
+  overflow-y: auto; /* Прокрутка по всей высоте экрана */
 }
 
-.shop-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr); /* 2 магазина в ряд */
+/* Скрытие прокрутки, но она остаётся функциональной */
+.mall-container::-webkit-scrollbar {
+  width: 0px;  /* Прячем полосу прокрутки */
+}
+
+.mall-container::-webkit-scrollbar-thumb {
+  background: transparent;  /* Оставляем полосу прокрутки полностью прозрачной */
+}
+
+/* Вертикальный список магазинов */
+.shop-list {
+  display: flex;
+  flex-direction: column;   /* Карточки идут в столбик */
   gap: 20px;
   margin-top: 20px;
-  /* Скролл по желанию */
-
-  overflow-y: auto;
+  padding-right: 15px;  /* Для прокрутки с правой стороны */
+  padding-bottom: 20px; /* Чтобы нижние карточки не скрывались */
 }
 
-/* Карточка в стиле EventsPage */
+/* Оформление карточек */
 .shop-card {
-  border: 1px solid rgb(0, 0, 0);
-  display: block;
-  background: #00000093;
+  border: 1px solid #000;
+  background: #1d1c1d93;
   padding: 1.5rem;
   border-radius: 0.75rem;
   text-align: center;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease;
   text-decoration: none;
-  color: #fff; /* текст на тёмном фоне */
+  color: #fff;
+  width: 600px;  /* Устанавливаем фиксированную ширину для карточек */
+  height: 350px; /* Высота карточки */
+  max-width: 90%;
+  margin: 0 auto; /* Центрируем карточки */
 }
 
 .shop-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
 }
 
 .card-img {
   width: 100%;
-  height: 140px;
+  height: 200px;  /* Устанавливаем высоту изображения */
   object-fit: cover;
   border-radius: 0.5rem;
 }
@@ -131,4 +146,9 @@ const enterShop = (route) => {
   color: #cfcfcf;
 }
 </style>
+
+
+
+
+
 

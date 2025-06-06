@@ -30,14 +30,14 @@ async def get_random_products(db: AsyncSession):
     result = await db.execute(
         select(Product).where(
             Product.stock > 0,
-            ~Product.rarity.in_([
-                ProductRarity.special, 
-                ProductRarity.prize, 
-                ProductRarity.unique, 
-                ProductRarity.vanished, 
-                ProductRarity.glitched, 
-                ProductRarity.void
-            ])
+            Product.rarity.notin_([
+    ProductRarity.special, 
+    ProductRarity.prize, 
+    ProductRarity.unique, 
+    ProductRarity.vanished, 
+    ProductRarity.glitched, 
+    ProductRarity.void
+])
         )
     )
     products = result.scalars().all()
@@ -195,8 +195,12 @@ async def get_shop(
         "гаджет": ["гаджет"],
         "туалет": ["туалет"],
         "сувенир": ["сувенир"],
+        "существо": ["существо"],
         "коллекционный": ["коллекционный", "сувенир", "игрушка", "наклейка"],
+        "косметический": ["косметический"],
 
+        "cosmetic": ["косметический"],
+        "cosmetic": ["cosmetic"],
         "toy": ["игрушка"],
         "tech": ["гаджет"],
         "toilet": ["туалет"],
@@ -207,9 +211,15 @@ async def get_shop(
         "book": ["книга"],
         "книжник": ["книга"],
         "food": ["еда", "напиток", "сладость"],
+        "существо": ["creature"],
+        "creature": ["существо"],
 
+        "cosmetic": ["косметический", "cosmetic"],
+        "zoo": ["существо"],
+        "вивариум": ["zoo"],
         "продуктовый": ["еда", "напиток", "сладость"],
         "технолайт": ["гаджет"],
+        "КосмоШоп": ["косметический", "cosmetic"],
         "коллекционер": ["коллекционный", "сувенир", "игрушка", "наклейка"],
         "collectioner": ["коллекционный", "сувенир", "игрушка", "наклейка"],
     }
@@ -264,24 +274,19 @@ async def buy_product(
     # 4. Дадим чуть XP за покупку
     await user.add_xp(db, 200)
 
-    # 5. Добавляем в инвентарь
-    existing_item = await db.execute(
-        select(InventoryItem).where(
-            InventoryItem.user_id == user.id,
-            InventoryItem.product_id == product.id
-        )
+    # 5. Всегда создаём новую запись в инвентаре (копия предмета)
+    new_item = InventoryItem(
+        user_id=user.id,
+        product_id=product.id,
+        quantity=1
     )
-    inventory_item = existing_item.scalar()
-    if inventory_item:
-        inventory_item.quantity += 1
-    else:
-        new_item = InventoryItem(user_id=user.id, product_id=product.id, quantity=1)
-        db.add(new_item)
+    db.add(new_item)
 
     # 6. Сохраняем изменения в БД
     db.add(user)
     db.add(product)
     await db.commit()
+
 
     # 7. Теперь обновляем Redis (уменьшаем сток в текущей витрине)
     shop_data_raw = await redis.get("global_shop")

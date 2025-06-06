@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 5174",
+    "dev": "vite --port 7177",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -18,11 +18,13 @@
     "@pixi/sprite": "^7.4.3",
     "@vueuse/core": "^12.8.2",
     "axios": "^1.8.1",
+    "dayjs": "^1.11.13",
     "floating-vue": "^5.2.2",
     "font-awesome": "^4.7.0",
     "marked": "^15.0.7",
     "phaser": "^3.88.2",
     "pinia": "^3.0.1",
+    "pinia-plugin-persistedstate": "^4.3.0",
     "reconnecting-websocket": "^4.4.0",
     "socket.io-client": "^4.8.1",
     "vue": "^3.5.13",
@@ -34,10 +36,10 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
-    "autoprefixer": "^10.4.20",
+    "autoprefixer": "^10.4.21",
     "postcss": "^8.5.3",
     "sass": "^1.85.1",
-    "tailwindcss": "^4.0.11",
+    "tailwindcss": "^4.1.7",
     "unplugin-auto-import": "^19.1.1",
     "vite": "^6.2.0"
   }

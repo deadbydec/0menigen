@@ -21,8 +21,14 @@ from .donateshop import router as donateshop_router
 from .landfill import router as landfill_router
 from .playershop import router as playershop_router
 from .safe import router as safe_router
+from .verifyemail import router as verifyemail_router
+from .pets import router as pets_router
+from .wardrobe import router as wardrobe_router
 
 __all__ = [
+    "wardrobe_router",
+    "pets_router",
+    "verifyemail_router",
     "safe_router",
     "playershop_router",
     "landfill_router",

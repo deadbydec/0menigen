@@ -3,6 +3,7 @@ import redis
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 from datetime import timedelta
+from fastapi_mail import ConnectionConfig
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -19,11 +20,35 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRES: timedelta = timedelta(days=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 7)))
     JWT_REFRESH_TOKEN_EXPIRES: timedelta = timedelta(days=int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES", 30)))
 
+     # 🔥 ДОБАВЬ ЭТИ:
+    MAIL_USERNAME: str
+    MAIL_PASSWORD: str
+    MAIL_FROM: str
+    MAIL_SERVER: str
+    MAIL_PORT: int
+    MAIL_STARTTLS: bool = True
+    MAIL_SSL_TLS: bool = False
+
+
     class Config:
         env_file = ".env"
 
 # Загружаем конфиг
 settings = Settings()
+
+MAIL_CONF = ConnectionConfig(
+    MAIL_USERNAME=settings.MAIL_USERNAME,
+    MAIL_PASSWORD=settings.MAIL_PASSWORD,
+    MAIL_FROM=settings.MAIL_FROM,
+    MAIL_PORT=settings.MAIL_PORT,
+    MAIL_SERVER=settings.MAIL_SERVER,
+    MAIL_STARTTLS=settings.MAIL_STARTTLS,
+    MAIL_SSL_TLS=settings.MAIL_SSL_TLS,
+    USE_CREDENTIALS=True,
+    VALIDATE_CERTS=True,
+    TIMEOUT=30  # увеличиваем таймаут
+)
+
 
 # 🔹 Глобальные настройки (пути и файлы)
 class Config:
@@ -32,9 +57,12 @@ class Config:
     # База данных (асинхронная)
     DATABASE_URL = settings.SQLALCHEMY_DATABASE_URI
 
+    
     # Пути для загрузок
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
     PRODUCT_UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'goods')
+    PET_UPLOAD_FOLDER     = os.path.join(BASE_DIR, 'static', 'pets')
+    COSMETIC_UPLOAD_FOLDER     = os.path.join(BASE_DIR, 'static', 'cosmetic')
     FORUM_THREADS_PATH = os.path.join(BASE_DIR, "data", "forum_threads.json")
     NEWS_FILE = os.path.join(BASE_DIR, "data", "news.json")
     PRODUCTS_FILE = os.path.join(BASE_DIR, "data", "products.json")
@@ -58,3 +86,6 @@ try:
 except redis.ConnectionError as e:
     print(f"❌ Ошибка подключения к Redis: {e}")
     REDIS_CONN = None
+
+   
+

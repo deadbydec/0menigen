@@ -1,14 +1,47 @@
 <template>
   <div class="auth-form">
-    <form @submit.prevent="handleRegister">
-      <input v-model="username" placeholder="Логин" required />
-      <input v-model="email" type="email" placeholder="Email" required />
-      <input v-model="password" type="password" placeholder="Пароль" required />
-      <input v-model="confirmPassword" type="password" placeholder="Повторите пароль" required />
-      <button type="submit">Зарегистрироваться</button>
+    <form @submit.prevent="handleRegister" autocomplete="off">
+      <!-- 🐝 honeypot против автозаполнения -->
+      <input type="text" style="display:none;" autocomplete="username">
+      <input type="password" style="display:none;" autocomplete="new-password">
+
+      <input
+        v-model="username"
+        name="username"
+        type="text"
+        placeholder="Логин"
+        autocomplete="off"
+        required
+      />
+      <input
+        v-model="email"
+        name="email"
+        type="email"
+        placeholder="Email"
+        autocomplete="off"
+        required
+      />
+      <input
+        v-model="password"
+        name="password"
+        type="password"
+        placeholder="Пароль"
+        autocomplete="new-password"
+        required
+      />
+      <input
+        v-model="confirmPassword"
+        name="confirm"
+        type="password"
+        placeholder="Повторите пароль"
+        autocomplete="new-password"
+        required
+      />
+      <button type="submit">Принять</button>
     </form>
   </div>
 </template>
+
 
 <script setup>
 import { ref } from "vue";

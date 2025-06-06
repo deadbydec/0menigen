@@ -2,21 +2,33 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from database import get_db
-from models.models import InventoryItem, Product, ProductType, User, LandfillItem
+from models.models import InventoryItem, Product, ProductType, User, LandfillItem, Incubation, Pet
 from auth.cookie_auth import get_current_user_from_cookie
 from sqlalchemy.orm import selectinload
 from typing import Optional
 from fastapi.responses import JSONResponse
 from random import random, randint
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+from utils.inventory_tools import build_inventory_item
+from random   import choice
+from pydantic import BaseModel, constr
+from fastapi import Body
+
+
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
 from pydantic import BaseModel
 
 class GiftPayload(BaseModel):
-    recipient_id: int
+    recipient_id: int   
     quantity: int = 1
 
+class HatchPayload(BaseModel):
+    # имя обязательно, 3–15 видимых символов, без лишних пробелов
+    name: constr(strip_whitespace=True, min_length=3, max_length=15)
+    incubation_id: int | None = None      # опционально выбрать конкретное яйцо
 
 @router.get("/")
 async def get_inventory(
@@ -25,6 +37,7 @@ async def get_inventory(
     user_cookie: Optional[User] = Depends(get_current_user_from_cookie),
 ):
     # CORS preflight fallback
+    
     if request.method == "OPTIONS" or not user_cookie:
         print("🔁 [INFO] Preflight или отсутствует юзер — пустой ответ")
         return JSONResponse(status_code=204, content={})
@@ -41,40 +54,146 @@ async def get_inventory(
     result = await db.execute(
         select(InventoryItem)
         .where(InventoryItem.user_id == user.id)
-        .options(selectinload(InventoryItem.product))
+        .options(
+            selectinload(InventoryItem.product),
+            selectinload(InventoryItem.incubation),
+        )
     )
     inventory = result.scalars().all()
 
-    print("📦 [DEBUG] Найдено предметов:", len(inventory))
-
-    inventory_list = []
-    for item in inventory:
-        if not item.product:
-            print(f"⚠️ Предмет {item.id} не имеет связанного продукта, пропускаем")
-            continue
-        
-        inventory_list.append({
-            "id": item.id,
-            "name": item.product.name,
-            "type": item.product.product_type.value,
-            "image": item.product.image,
-            "rarity": item.product.rarity.value,
-            "quantity": item.quantity,
-            "product": {
-                "name": item.product.name,
-                "image": item.product.image,
-                "description": item.product.description,
-                "rarity": item.product.rarity.value,
-                "product_type": item.product.product_type.value,
-            }
-        })
-
+    inventory_list = [build_inventory_item(item) for item in inventory if item.product]
     user_race = user.race.code.lower() if user.race else None
 
     return {
         "inventory": inventory_list,
-        "user_race": user_race
+        "user_race": user_race,
     }
+
+
+
+
+@router.post("/incubate/{item_id}")
+async def incubate_item(
+    item_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user_from_cookie)
+):
+    # Получаем предмет
+    result = await db.execute(
+        select(InventoryItem)
+        .where(InventoryItem.id == item_id)
+        .options(
+            selectinload(InventoryItem.product),
+            selectinload(InventoryItem.incubation)  # 👈 вот это добавь
+        )
+    )
+    item = result.scalar()
+
+    if not item or item.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Этот предмет не твой")
+
+    if item.product.product_type != ProductType.creature:
+        raise HTTPException(status_code=400, detail="Это не яйцо!")
+
+    if item.incubation:
+        raise HTTPException(status_code=400, detail="Это яйцо уже инкубируется")
+
+    # Проверяем, есть ли уже активная инкубация
+    active = await db.execute(
+        select(Incubation).where(Incubation.user_id == user.id, Incubation.is_hatched == False)
+    )
+    if active.scalar():
+        raise HTTPException(status_code=400, detail="У тебя уже есть активное яйцо")
+
+    incubation_data = item.product.custom or {}
+    time_range = incubation_data.get("incubation_time_range", [3, 5])
+    minutes = randint(time_range[0], time_range[1])
+
+    now = datetime.now(timezone.utc)
+    hatch_at = now + timedelta(minutes=minutes)
+
+    new_incubation = Incubation(
+        user_id=user.id,
+        inventory_item_id=item.id,
+        started_at=now,
+        hatch_at=hatch_at,
+        is_hatched=False
+    )
+
+    db.add(new_incubation)
+    await db.commit()
+
+    return {
+        "success": True,
+        "message": f"🥚 Инкубация началась! Вылупление через {minutes} минут.",
+        "hatch_at": hatch_at.isoformat()
+
+    }
+
+
+@router.post("/hatch")
+async def hatch_pet(
+    payload: HatchPayload = Body(...),            # ←  …  тело ОБЯЗАТЕЛЬНО
+    db: AsyncSession        = Depends(get_db),
+    user: User              = Depends(get_current_user_from_cookie),
+):   
+    # ② подцепляем пользователя в ТЕКУЩЕЙ сессии и сразу грузим race
+    user = await db.get(User, user.id, options=[selectinload(User.race)])
+    """Вылупляет питомца (имя — строго обязательное)."""
+
+    # 0 ▸ доп. проверка (хотя Pydantic уже отвалидировал)
+    if not payload.name:
+        raise HTTPException(400, "Нужно придумать имя для питомца!")
+
+    # 1 ▸ ищем готовую инкубацию (или конкретную по id)
+    q = (
+        select(Incubation)
+        .where(
+            Incubation.user_id == user.id,
+            Incubation.is_hatched == False,
+            Incubation.hatch_at <= datetime.now(timezone.utc)
+        )
+        .options(
+            selectinload(Incubation.inventory_item)
+            .selectinload(InventoryItem.product)
+        )
+    )
+    if payload.incubation_id:
+        q = q.where(Incubation.id == payload.incubation_id)
+
+    result      = await db.execute(q)
+    incubation  = result.scalar_one_or_none()
+    if not incubation:
+        raise HTTPException(400, "Нет готовых к вылуплению яиц")
+
+    egg_item     = incubation.inventory_item
+    egg_product  = egg_item.product
+    egg_settings = egg_product.custom or {}
+
+    # 2 ▸ параметры пета
+    race_code  = egg_settings.get("race_code", user.race.code if user.race else "unknown")
+    image_name = choice(egg_settings.get("spawn_variants", ["noimage.png"]))
+    trait_pick = choice(egg_settings.get("trait_pool", ["silent"]))
+
+    # 3 ▸ создаём Pet
+    new_pet = Pet(
+        user_id   = user.id,
+        race_code = race_code,
+        name      = payload.name,               # ← имя из запроса
+        image     = f"pets/{image_name}",
+        trait     = trait_pick,
+    )
+    db.add(new_pet)
+
+    # 4 ▸ завершаем инкубацию
+    incubation.is_hatched = True
+    await db.delete(egg_item)                   # удаляем яйцо
+
+    await db.commit()
+    await db.refresh(new_pet)
+
+    return {"id": new_pet.id, "name": new_pet.name, "image": new_pet.image}
+
 
 
 
@@ -271,6 +390,10 @@ async def recycle_item(
 
     await db.commit()
     return {"message": " ".join(result_msg)}
+
+
+
+
 
 
 

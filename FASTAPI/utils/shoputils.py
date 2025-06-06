@@ -50,7 +50,7 @@ async def get_global_shop():
     return json.loads(data) if data else []
 
 # 🔹 Добавление товаров в базу
-async def add_products_to_db(db: AsyncSession):
+async def add_or_update_products_from_json(db: AsyncSession):
     products_data = await load_products_from_json()
 
     rarity_map = {
@@ -97,26 +97,66 @@ async def add_products_to_db(db: AsyncSession):
     ProductRarity.void
 }
     # Чистим только то, что НЕ входит в защищённые
-    stmt = delete(Product).where(Product.rarity.notin_(PROTECTED_RARITIES))
-    await db.execute(stmt)
-    await db.commit()
+    #stmt = delete(Product).where(Product.rarity.notin_(PROTECTED_RARITIES))
+    #await db.execute(stmt)
+    #await db.commit()
 
 
-    # Добавляем новые товары
+    result = await db.execute(select(Product))
+    existing_products = {p.id: p for p in result.scalars()}
+
+    new_count = 0
+    updated_count = 0
+
     for data in products_data:
-        product = Product(
-            name=data["name"],
-            description=data["description"],
-            price=data["price"],
-            image=data["image"],
-            rarity=rarity_map[data["rarity"]],
-            product_type=type_map[data["product_type"]],
-            stock=0
-        )
-        db.add(product)
+        pid = data["id"]
+        if pid in existing_products:
+            # 🧼 Обновляем, если что-то изменилось
+            product = existing_products[pid]
+            updated = False
+
+            if product.name != data["name"]:
+                product.name = data["name"]
+                updated = True
+            if product.description != data["description"]:
+                product.description = data["description"]
+                updated = True
+            if product.price != data["price"]:
+                product.price = data["price"]
+                updated = True
+            if product.image != data["image"]:
+                product.image = data["image"]
+                updated = True
+            if product.rarity != rarity_map[data["rarity"]]:
+                product.rarity = rarity_map[data["rarity"]]
+                updated = True
+            if product.product_type != type_map[data["product_type"]]:
+                product.product_type = type_map[data["product_type"]]
+                updated = True
+            if product.custom != data.get("custom", {}):
+                product.custom = data.get("custom", {})
+                updated = True
+
+            if updated:
+                updated_count += 1
+        else:              
+            product = Product(
+                id=data["id"],
+                name=data["name"],
+                description=data["description"],
+                price=data["price"],
+                image=data["image"],
+                rarity=rarity_map[data["rarity"]],
+                product_type=type_map[data["product_type"]],
+                stock=1,
+                custom=data.get("custom", {})
+            )
+            db.add(product)
+            new_count += 1
 
     await db.commit()
-    print("✅ Все товары загружены в базу и stock = 10!")
+    print(f"✅ Добавлено новых товаров: {new_count}")
+    print(f"🔁 Обновлено существующих товаров: {updated_count}")
 
 # 🔹 Обновление запаса товаров
 async def reset_stock(db: AsyncSession):

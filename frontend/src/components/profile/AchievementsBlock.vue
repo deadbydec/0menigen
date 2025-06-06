@@ -1,6 +1,6 @@
 <template>
   <div class="achievements-block">
-    <h3>Ачивки</h3>
+    <h3>Достижения</h3>
 
     <div class="hex-grid">
       <div 
@@ -23,7 +23,7 @@
     </div>
 
     <!-- Кнопка "Показать все" -->
-    <button class="show-all-btn" @click="showAll = true">ПОКАЗАТЬ ВСЕ</button>
+    <button class="show-all-btn" @click="showAll = true">Все</button>
 
     <!-- Модалка с полным списком ачивок -->
     <AchievementModal v-if="showAll" :achievements="achievements" @close="showAll = false" />
@@ -66,6 +66,7 @@ const formatDate = (date) => new Date(date).toLocaleDateString();
   border-radius: 10px;
   padding: 10px;
   text-align: center;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .hex-grid {
@@ -91,12 +92,14 @@ const formatDate = (date) => new Date(date).toLocaleDateString();
 }
 
 .hex-cell.placeholder {
-  background: #646364d7;
-  border-color: gray;
+  background:linear-gradient(80deg, #2925278c,rgba(78, 158, 153, 0.637));
+  
+
 }
 
 .placeholder-icon {
   font-size: 24px;
+
   color: gray;
 }
 
@@ -117,12 +120,13 @@ const formatDate = (date) => new Date(date).toLocaleDateString();
 }
 
 .show-all-btn {
-  background: rgba(101, 17, 150, 0.863);
+  background:linear-gradient(80deg, #292527be,rgba(78, 158, 153, 0.95));
   color: white;
   padding: 8px 12px;
   font-weight: bold;
-  border: none;
+
   cursor: pointer;
   margin-top: 10px;
+  border: 1px solid #2e2c2c;
 }
 </style>

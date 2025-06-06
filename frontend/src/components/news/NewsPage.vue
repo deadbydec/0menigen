@@ -58,6 +58,12 @@ onMounted(() => {
 <style lang="scss">
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
 
+$glass-bg: rgba(255, 255, 255, 0.05);
+$glass-border: rgba(255, 255, 255, 0.1);
+$glass-hover: rgba(255, 255, 255, 0.08);
+$accent: #d6dcdda6;
+
+
 .news {
   text-align: center;
   padding: 50px;
@@ -76,7 +82,6 @@ onMounted(() => {
   flex-wrap: nowrap;
   justify-content: center;
   gap: 10px;
-
   position: fixed; /* ✅ Теперь всегда поверх */
   top: 50px;
   left: 51.7%;
@@ -91,7 +96,9 @@ onMounted(() => {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    background: rgba(0, 0, 0, 0.575);
+    backdrop-filter: blur(7px);
+    background:rgba(38, 32, 39, 0.815);
+
     color: white;
     transition: 0.3s;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.651);
@@ -102,7 +109,7 @@ onMounted(() => {
   }
 
   .active {
-    background: linear-gradient(90deg, #00ffccbe, #9900ffc7);
+    background: linear-gradient(90deg, #1df0c5be, #005851da);
     color: white;
   }
 }
@@ -118,13 +125,14 @@ onMounted(() => {
 
 /* 🔥 Новости */
 .news-item {
-  background: rgba(0, 0, 0, 0.555);
+  background:rgba(38, 32, 39, 0.664);
   padding: 20px;
   border-radius: 10px;
   border: 1px solid rgb(0, 0, 0);
   margin-bottom: 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.651);
   color: white;
+  backdrop-filter: blur(7px);
   text-align: left;
   width: 100%; /* ✅ Фиксируем ширину */
   min-height: 150px; /* ✅ Фиксируем высоту */

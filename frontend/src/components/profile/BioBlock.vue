@@ -1,6 +1,6 @@
 <template>
   <div class="bio-block">
-    <h3>Биография</h3>
+    <h2>Биография</h2>
 
     <div v-if="isEditing">
       <textarea
@@ -68,9 +68,17 @@ const saveBio = async () => {
 
 <style scoped>
 .bio-block {
-  position: relative;
-  max-width: 500px;
-  border: 2px solid rgba(0, 0, 0, 0.692);
+  display: flex;
+  max-width: 588px;
+  flex-direction: column;
+  backdrop-filter: blur(7px);
+  background:rgba(38, 32, 39, 0.48);
+  border: 1px solid #2e2c2c;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  gap: 10px;
+
 }
 
 textarea {

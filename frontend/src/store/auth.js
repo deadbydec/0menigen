@@ -1,12 +1,16 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import api from "@/utils/axios";
+import { useRouter } from 'vue-router'
+import { usePlayerStore } from "@/store/player";
 
 export const useAuthStore = defineStore("auth", () => {
   const user = ref(null);
   const isAuthenticated = computed(() => !!user.value);
   const isFetching = ref(false);
   const authReady = ref(false);
+  const router = useRouter()
+
 
   watch(
     () => useAuthStore.user,
@@ -49,37 +53,47 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function fetchUser() {
-    if (isFetching.value) return;
-    isFetching.value = true;
-    try {
-      const res = await api.get("/player/"); // 🔥 рабочий, защищённый роут
-      user.value = res.data.name || null;
-    } catch {
+  if (isFetching.value) return;
+  isFetching.value = true;
+  try {
+    const res = await api.get("/player/");
+    if (res.status === 200 && res.data?.name) {
+      user.value = res.data.name;
+    } else {
       user.value = null;
-    } finally {
-      isFetching.value = false;
-      authReady.value = true;
     }
+  } catch (err) {
+    console.error("❌ Ошибка fetchUser", err);
+    user.value = null;
+  } finally {
+    isFetching.value = false;
+    authReady.value = true;
   }
+}
+
+
   
 
+async function logout() {
+  try {
+    await api.post("/auth/logout", null, { withCredentials: true });
+    console.log("✅ Выход успешен!");
+  } catch (e) {
+    console.error("❌ Ошибка выхода", e);
+  } finally {
+    const playerStore = usePlayerStore();
+    playerStore.resetPlayer?.(); // если есть
+    clearAuth();
 
-  async function logout() {
-    try {
-      // Отправляем запрос на сервер для удаления куки (withCredentials важен)
-      await api.post("/auth/logout", null, { withCredentials: true });
-      console.log("✅ Выход успешен!");
-    } catch (error) {
-      console.error("⚠️ Ошибка при выходе:", error.response?.data || error.message);
-    } finally {
-      clearAuth();
-      // Добавляем задержку, чтобы куки точно очистились, затем перенаправляем на логин
-      setTimeout(() => {
-        window.location.replace("/login");
-      },
-    );
-    }
+    // 💣 финальный удар
+    window.location.href = "/login"; // переход
+    setTimeout(() => {
+      window.location.reload();      // + перезапуск UI
+    }, 100); // можно даже без задержки
   }
+}
+
+
   
   function clearAuth() {
     // Принудительно удаляем все куки

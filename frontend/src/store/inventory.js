@@ -1,151 +1,181 @@
-// inventory.js
-import { defineStore } from "pinia";
-import { ref, onMounted, onUnmounted } from "vue";
-import api from "@/utils/axios";
-import { useToastStore } from '@/store/toast' // 👈 импорт сторов как обычно
+// store/inventory.js
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import api from '@/utils/axios'
+import { useToastStore } from '@/store/toast'
 
-export const useInventoryStore = defineStore("inventory", () => {
-  const inventory = ref([]);
-  const toastStore = useToastStore()
-  const userRace = ref(""); // Новое поле для расы пользователя
-  const selectedItem = ref(null);
-  const csrfToken = getCookie("csrf_access_token");
+export const useInventoryStore = defineStore('inventory', () => {
+  /* ── state ─────────────────────────────────────────────── */
+  const inventory     = ref([])
+  const userRace      = ref('')
+  const selectedItem  = ref(null)
+  const toastStore    = useToastStore()
 
-  function getCookie(name) {
-    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-    return match ? match[2] : null;
+  /* ── helpers ───────────────────────────────────────────── */
+  function getCookie (name) {
+    const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
+    return m ? m[2] : null
+  }
+  const csrf = () => getCookie('csrf_access_token')   // свежий токен каждый раз
+
+  /* ▸ перезагрузка инвентаря из API */
+  async function fetchInventory () {
+    try {
+      const { data } = await api.get('/inventory/', {
+        withCredentials: true,
+        headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' }
+      })
+      inventory.value = (data.inventory || []).filter(i => i.quantity > 0)
+      userRace.value  = data.user_race || ''
+    } catch (err) {
+      console.error('fetchInventory:', err)
+      toastStore.addToast('Ошибка загрузки инвентаря', { type: 'error' })
+    }
   }
 
-  // Загружаем инвентарь из базы — как банковский счёт, который всегда достоверен
-  const fetchInventory = async () => {
-    try {
-      const response = await api.get("/inventory/", {
-        withCredentials: true,
-        headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
-      });
-      inventory.value = (response.data.inventory || []).filter(item => item.quantity > 0);
-      userRace.value = response.data.user_race || ""; // Сохраняем расу пользователя
-    } catch (error) {
-      console.error("Ошибка загрузки инвентаря:", error);
-      toastStore.addToast("Ошибка загрузки инвентаря", { type: 'error' });
-    }
-  };
-
-  // Использование предмета: вызываем API, затем fetchInventory() для гарантии актуальности
-  const useItem = async () => {
+  /* ── generic guard ─────────────────────────────────────── */
+  function guardSelected (actionName) {
     if (!selectedItem.value) {
-      toast.error("Выберите предмет перед использованием!");
-      return;
+      toastStore.addToast(`Нет выбранного предмета для «${actionName}»`, { type: 'error' })
+      return false
     }
+    return true
+  }
+
+  /* ▸ USE (НЕ для яиц) */
+  async function useItem () {
+    if (!guardSelected('использования')) return
+
+    // запрещаем «use» для яиц
+    if (selectedItem.value.type === 'creature') {
+      toastStore.addToast('Это яйцо. Выберите «Инкубировать / Вылупить».', { type: 'info' })
+      return
+    }
+
     try {
-      const response = await api.post(
+      const { data } = await api.post(
         `/inventory/use/${selectedItem.value.id}`,
         null,
-        {
-          withCredentials: true,
-          headers: { "X-CSRF-TOKEN": csrfToken }
-        }
-      );
-      toastStore.addToast(response.data.message, { type: 'success' });
-      await fetchInventory(); // подтягиваем актуальные данные из базы
-      selectedItem.value = null;
-    } catch (error) {
-      console.error("Ошибка использования предмета:", error);
-      toastStore.addToast("Блять. Я не могу это использовать!", { type: 'error' });
+        { withCredentials: true, headers: { 'X-CSRF-TOKEN': csrf() } }
+      )
+      toastStore.addToast(data.message, { type: 'success' })
+    } catch (err) {
+      console.error('useItem:', err)
+      toastStore.addToast('Не удалось использовать предмет', { type: 'error' })
+    } finally {
+      await fetchInventory()
+      selectedItem.value = null
     }
-  };
+  }
 
-  // Уничтожение предмета: то же самое — API и затем fetchInventory()
-  const destroyItem = async () => {
-    if (!selectedItem.value) {
-      toast.error("Выберите предмет перед удалением!");
-      return;
+  /* ▸ INCUBATE */
+  async function incubateItem () {
+    if (!guardSelected('инкубации')) return
+
+    if (selectedItem.value.type !== 'creature') {
+      toastStore.addToast('Выберите яйцо для инкубации', { type: 'error' })
+      return
     }
+
     try {
-      const response = await api.delete(
+      const { data } = await api.post(
+        `/inventory/incubate/${selectedItem.value.id}`,
+        null,
+        { withCredentials: true, headers: { 'X-CSRF-TOKEN': csrf() } }
+      )
+      toastStore.addToast(data.message || 'Инкубация началась!', { type: 'success' })
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Ошибка запуска инкубации'
+      toastStore.addToast(msg, { type: 'error' })
+      console.error('incubateItem:', err)
+    } finally {
+      await fetchInventory()
+      selectedItem.value = null
+    }
+  }
+
+  /* ▸ DISCARD */
+  async function destroyItem () {
+    if (!guardSelected('выброса')) return
+    try {
+      const { data } = await api.delete(
         `/inventory/discard/${selectedItem.value.id}`,
-        {
-          withCredentials: true,
-          headers: { "X-CSRF-TOKEN": csrfToken }
-        }
-      );
-      toastStore.addToast(response.data.message, { type: 'success' });
-      selectedItem.value = null;
-      await fetchInventory();
-    } catch (error) {
-      console.error("Ошибка уничтожения предмета:", error);
-      toast.error("Ошибка при выбрасовании предмета!");
+        { withCredentials: true, headers: { 'X-CSRF-TOKEN': csrf() } }
+      )
+      toastStore.addToast(data.message, { type: 'success' })
+    } catch (err) {
+      console.error('destroyItem:', err)
+      toastStore.addToast('Ошибка при выбрасывании предмета', { type: 'error' })
+    } finally {
+      await fetchInventory()
+      selectedItem.value = null
     }
-  };
+  }
 
-  const recycleItem = async () => {
-    if (!selectedItem.value) return alert("Выберите предмет для переработки!");
+  /* ▸ RECYCLE (только для Наллвур) */
+  async function recycleItem () {
+    if (!guardSelected('переработки')) return
     try {
-      const response = await api.post(
+      const { data } = await api.post(
         `/inventory/recycle/${selectedItem.value.id}`,
         null,
-        {
-          withCredentials: true,
-          headers: { "X-CSRF-TOKEN": csrfToken }
-        }
-      );
-      toastStore.addToast(response.data.message, { type: 'success' });
-      await fetchInventory();
-      selectedItem.value = null;
-    } catch (error) {
-      console.error("Ошибка переработки предмета:", error);
-      toastStore.addToast("Сука! Я не могу это переработать!", { type: 'error' });
+        { withCredentials: true, headers: { 'X-CSRF-TOKEN': csrf() } }
+      )
+      toastStore.addToast(data.message, { type: 'success' })
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Ошибка переработки'
+      toastStore.addToast(msg, { type: 'error' })
+      console.error('recycleItem:', err)
+    } finally {
+      await fetchInventory()
+      selectedItem.value = null
     }
-  };
+  }
 
-  const sendToVault = async (itemId, quantity = 1) => {
+  /* ▸ SAFE / VAULT */
+  async function sendToVault (itemId, qty = 1) {
     try {
-      const payload = {
-        item_id: itemId,
-        quantity: quantity
-      };
-  
-      const res = await api.post('/safe/vault/deposit-item', payload, {
-        withCredentials: true,
-        headers: { "X-CSRF-TOKEN": csrfToken }
-      });
-  
-      toastStore.addToast(res.data.message, { type: 'success' });
-      await fetchInventory();
-      selectedItem.value = null;
-      return res.data;
-  
-    } catch (error) {
-      console.error("Ошибка при перемещении в сейф:", error);
-      const msg = error.response?.data?.detail || "Ошибка: не удалось убрать предмет в сейф.";
-      toastStore.addToast(msg, { type: 'error' });
-      throw error;
+      const { data } = await api.post(
+        '/safe/vault/deposit-item',
+        { item_id: itemId, quantity: qty },
+        { withCredentials: true, headers: { 'X-CSRF-TOKEN': csrf() } }
+      )
+      toastStore.addToast(data.message, { type: 'success' })
+      await fetchInventory()
+      selectedItem.value = null
+      return data
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Не удалось убрать предмет в сейф'
+      toastStore.addToast(msg, { type: 'error' })
+      console.error('sendToVault:', err)
+      throw err
     }
-  };
-  
-  
-  
-  
+  }
 
+  /* ▸ SELECT / TOGGLE */
+  function selectItem (item) {
+    // если пришёл null → просто очистить
+    if (!item) {
+      selectedItem.value = null
+      return
+    }
+    selectedItem.value = selectedItem.value?.id === item.id ? null : item
+  }
 
-  // Выбор предмета
-  const selectItem = (item) => {
-    selectedItem.value = selectedItem.value?.id === item.id ? null : item;
-  };
-
-  // При монтировании компонента сразу загружаем инвентарь
-
-
+  /* ── expose ────────────────────────────────────────────── */
   return {
     inventory,
     userRace,
     selectedItem,
+
     fetchInventory,
     useItem,
+    incubateItem,
+    destroyItem,
     recycleItem,
     sendToVault,
-    destroyItem,
     selectItem
-  };
-});
+  }
+})
+
 

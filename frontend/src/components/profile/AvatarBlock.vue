@@ -127,28 +127,30 @@ const uploadAvatar = async (event) => {
 
 .avatar-progress-container {
   position: relative;
-  width: 170px;
-  height: 170px;
+  width: 200px;
+  height: 200px;
   margin: 0 auto 11px;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 50;
 }
 
 .xp-ring {
   position: absolute;
-  width: 173px;
-  height: 174px;
-  top: -2px;
-  left: -2px;
+  width: 230px;
+  height: 230px;
+  top: -16px;
+  left: -16px;
   transform: rotate(-90deg);
-  z-index: 0;
+  z-index: 50;
 }
 
 .xp-ring .bg {
   fill: none;
   stroke: rgba(48, 40, 53, 0.356);
   stroke-width: 8;
+  z-index: 50;
 }
 
 .xp-ring .fg {
@@ -157,6 +159,7 @@ const uploadAvatar = async (event) => {
   stroke-width: 8;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.4s ease;
+  z-index: 50;
 }
 
 .avatar-upload {
@@ -167,8 +170,8 @@ const uploadAvatar = async (event) => {
 }
 
 .avatar {
-  width: 151px;
-  height: 153px;
+  width: 200px;
+  height: 200px;
   border-radius: 50%;
   object-fit: cover;
   transition: opacity 0.2s ease-in-out;

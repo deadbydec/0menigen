@@ -54,9 +54,15 @@
 </template>
 
 <script setup>
-import { computed, onMounted, watch, nextTick } from "vue"
+import { ref, computed, onMounted, watch, nextTick } from "vue"
 import { useRoute } from "vue-router"
 import { useShopStore } from "@/store/shop"
+
+// props
+const props = defineProps({ category: String })
+
+// ✅ Локальная переменная, чтобы избежать readonly ошибок
+const localCategory = ref(props.category)
 
 // 1) Константы для отображения категорий и слоганов
 const displayNames = {
@@ -65,7 +71,8 @@ const displayNames = {
   collectioner: "Артефактный Базар",
   drugs: "ФармаГлюк",
   tech: "ЦифроХлам",
-  toilet: "Унитазный Ломбард",
+  zoo: "Вивариум",
+  cosmetic: "КосмоШоп"
 }
 
 const slogans = [
@@ -90,7 +97,8 @@ const allowedTypesMap = {
   collectioner: ["коллекционный", "сувенир", "игрушка", "наклейка"],
   drugs: ["аптека"],
   tech: ["гаджет"],
-  toilet: ["туалет"],
+  zoo: ["существо"],
+  cosmetic: ["косметический"]
 }
 
 // 3) Реактивный доступ к роуту и стору
@@ -98,21 +106,27 @@ const route = useRoute()
 const category = computed(() => route.params.category || "")
 const shopStore = useShopStore()
 
+// Следим за props.category и обновляем localCategory
+watch(() => props.category, (newVal) => {
+  localCategory.value = newVal
+  shopStore.fetchShopItems(newVal)
+})
+
 // 4) Реактивные ссылки на данные стора
 const shopItems = computed(() => shopStore.shopItems)
-const wasUpdated = computed(() => shopStore.wasUpdated)
+const wasUpdated = ref(false)
 
 // 5) Локальные computed значения
-const displayCategoryName = computed(() => displayNames[category.value] || "🌀 Магазин Пустоты")
+const displayCategoryName = computed(() => displayNames[localCategory.value] || "🌀 Магазин Пустоты")
 const randomSlogan = computed(() => slogans[Math.floor(Math.random() * slogans.length)])
 
 // 6) Методы для покупки и обновления
 function handleBuy(item) {
-  shopStore.buyProduct(item.id, item.name, category.value)
+  shopStore.buyProduct(item.id, item.name, localCategory.value)
 }
 
 function handleRefresh() {
-  shopStore.fetchShopItems(category.value)
+  shopStore.fetchShopItems(localCategory.value)
 }
 
 // Раскраска редкости товара
@@ -130,22 +144,21 @@ function getRarityClass(rarity) {
   }
 }
 
-// 7) Lifecycle hooks: подключаем сокет и делаем первичный запрос за товарами
+// 7) Lifecycle hooks
 onMounted(() => {
   shopStore.connectSocket()
-  shopStore.fetchShopItems(category.value)
+  shopStore.fetchShopItems(localCategory.value)
 
-  // Каждые 10 секунд имитируем обновление через скрытую кнопку
-  setInterval(() => {
-    document.querySelector('.refresh-button')?.click()
-  }, 10000)
+  // каждые 10 сек авто-refresh
+  //setInterval(() => {
+  //  document.querySelector('.refresh-button')?.click()
+ // }, 10000)
 })
 
-// При изменении списка товаров принудительно обновляем DOM (если нужно)
+// при изменении товаров — плавно перерендериваем
 watch(shopItems, async () => {
   console.log("📦 Товары изменились, возможно обновление!")
   await nextTick(() => {
-    // Обновляем ключ, чтобы заставить Vue полностью пересоздать DOM-элементы
     wasUpdated.value = Date.now()
   })
 })
@@ -155,14 +168,20 @@ watch(shopItems, async () => {
 
 
 
+
 <style scoped lang="scss">
 
 .shop-wrapper {
-  height: 100vh;
+  background:rgba(38, 32, 39, 0.48);
   overflow-y: auto;
-  padding: 0;
-  margin: 0;
-  padding-top: 50px;
+  border: 1px solid rgb(36, 35, 37);
+  margin: 0 auto;
+  padding: 10px;
+  border-radius: 17px;
+
+  transform-origin: top center;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
 
   /* Скрываем скроллбар, но сохраняем прокрутку */
   scrollbar-width: none; /* Firefox */
@@ -174,13 +193,22 @@ watch(shopItems, async () => {
 }
 
 
+h2 {
+  color:  #2e2929d2;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: medium;
+
+}
+
 h1 {
   background: rgba(0, 0, 0, 0.4);
   padding: 6px 14px;
+
   border-radius: 12px;
   display: inline-block;
-  backdrop-filter: blur(3px);
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+
+
+  font-family: 'JetBrains Mono', monospace;
 }
 
 body {
@@ -196,17 +224,20 @@ html {
 html, body {
   margin: 0;
   padding: 0;
-  background: #f0f0f0; // Или любой фон
+
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* Контейнер магазина */
 .shop-page {
   /* Снимаем лишние отступы, ставим масштаб 80% */
   margin: 0 auto;
-  padding: 100px;
+  padding: 10px;
   transform: scale(0.8);
+  
   transform-origin: top center;
   text-align: center;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* Заголовок можно чуть уменьшить ещё, если нужно */
@@ -214,6 +245,7 @@ html, body {
   margin: 0 0 15px;
   font-size: 24px;
   font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* Сетка товаров */
@@ -227,21 +259,21 @@ html, body {
 
 /* Карточка товара */
 .shop-slot {
+  will-change: transform;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 6px;
-  border: 1px solid #000;
+  border: 1px solid #2e2c2c;
   border-radius: 9px;
-  background-color: #f9f9f9b2;
-  transition: transform 0.2s, box-shadow 0.2s;
+  background:linear-gradient(80deg, #cfcdceb2,rgba(197, 228, 226, 0.664));
+  transition: transform 0.2s;
   text-align: center;
   overflow: hidden;
 
   &:hover {
     transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
   img {
@@ -326,28 +358,7 @@ html, body {
 }
 
 /* Эффект пульса при обновлении */
-.pulse {
-  animation: pulse 0.6s ease-in-out;
-}
 
-@keyframes pulse {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.02); }
-  100% { transform: scale(1); }
-}
-
-@keyframes glitch {
-  0% { transform: translate(0); }
-  20% { transform: translate(-1px, 1px); }
-  40% { transform: translate(1px, -1px); }
-  60% { transform: translate(-1px, 0); }
-  80% { transform: translate(1px, 1px); }
-  100% { transform: translate(0); }
-}
-
-h1 {
-  animation: glitch 1.8s infinite;
-}
 </style>
 
   

@@ -26,16 +26,17 @@ export default defineConfig(({ mode }) => {
     ], // ✅ `plugins` теперь в правильном месте!
 
     server: {
+      historyApiFallback: true,
       https: {
         cert: fs.readFileSync('localhost+2.pem'),
         key: fs.readFileSync('localhost+2-key.pem'),
       },
-      host: true,
-      port: 5174,
+      host: '0.0.0.0',
+      port: parseInt(env.VITE_PORT) || 7177,
       strictPort: true,
       open: false,
       cors: {
-        origin: "https://localhost:5174",
+        origin: "https://localhost:5177",
         credentials: true,
       },
       proxy: {

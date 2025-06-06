@@ -17,6 +17,8 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_socketio import SocketManager
+import logging
+from fastapi.logger import logger
 from models import TokenBlocklist, News, User, Product, ForumThread
 
 from database import get_db, async_session
@@ -36,7 +38,7 @@ socket_manager = SocketManager(app)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://localhost:5174"],  # Разрешаем ВСЁ (или укажи точные домены)
+    allow_origins=["https://localhost:7177"],  # Разрешаем ВСЁ (или укажи точные домены)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,12 +47,8 @@ app.add_middleware(
 app.add_middleware(AsyncCookieAuthMiddleware)
 
 
-
-
 # 🛠️ Добавляем костыль для OPTIONS, чтобы избежать 400
-@app.options("/{rest_of_path:path}")
-async def preflight_handler(rest_of_path: str):
-    return Response(status_code=200)
+
 
 
 jwt_access = JwtAccessBearer(
@@ -108,7 +106,7 @@ async def root():
     return {"message": "FastAPI + Socket.IO работает!"}
 
 
-from routes import auth_router, safe_router, playershop_router, landfill_router, donateshop_router, toilet_doom_router, gift_router, shop_router, news_router, index_router, player_router, players_router, inventory_router, games_router, profile_router, friends_router, inbox_router, wall_router, achievements_router, leaderboard_router, forum_router
+from routes import auth_router, pets_router, wardrobe_router, safe_router, verifyemail_router, playershop_router, landfill_router, donateshop_router, toilet_doom_router, gift_router, shop_router, news_router, index_router, player_router, players_router, inventory_router, games_router, profile_router, friends_router, inbox_router, wall_router, achievements_router, leaderboard_router, forum_router
 
 # Подключаем роутеры (аналог Flask Blueprint)
 app.include_router(index_router)
@@ -134,12 +132,16 @@ app.include_router(landfill_router)
 app.include_router(donateshop_router, prefix="/api/donateshop")
 app.include_router(playershop_router, prefix="/api/playershop")
 app.include_router(safe_router, prefix="/api/safe")
+app.include_router(verifyemail_router)
+app.include_router(pets_router)
+app.include_router(wardrobe_router)
 
 from routes.socketio import socket_app
+
 app.mount("/socket.io", socket_app)
 
-SSL_CERT_PATH = "C:/Users/cumvolk/omeznet/frontend/localhost+2.pem"
-SSL_KEY_PATH = "C:/Users/cumvolk/omeznet/frontend/localhost+2-key.pem"
+SSL_CERT_PATH = "C:/Users/cumvolk/WebProjects/omeznet/frontend/localhost+2.pem"
+SSL_KEY_PATH = "C:/Users/cumvolk/WebProjects/omeznet/frontend/localhost+2-key.pem"
 
 @app.middleware("https")
 async def update_online_status(request: Request, call_next):
@@ -154,7 +156,10 @@ async def update_online_status(request: Request, call_next):
     return await call_next(request)
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    logger.setLevel(logging.INFO)
     uvicorn.run(
+    
         "main:app",
         host="localhost",
         port=5002,  # HTTPS-порт

@@ -2,12 +2,12 @@
   <div class="home">
     <!-- 🔥 Главный заголовок -->
     <section class="hero">
-      <h1>Ωmenigen</h1>
-      <p class="tagline">Твоё цифровое приключение начинается здесь! 🌪</p>
-      <router-link v-if="!isAuthenticated" to="/auth" class="btn btn-primary">Начать играть</router-link>
-      <router-link v-else to="/news" class="btn btn-secondary">Новости</router-link>
-      
+      <h1>Ω</h1>
+      <p class="tagline">Твоё цифровое приключение начинается здесь! </p>
+      <router-link v-if="!isAuthenticated" to="/news" class="btn btn-primary">Начать играть</router-link>
     </section>
+
+    
 
     <!-- 🔥 Основные блоки -->
     <section class="features">
@@ -52,37 +52,48 @@ export default {
 
 <style lang="scss">
 .home {
+    font-family: 'JetBrains Mono', monospace;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
     color: white;
-    font-family: 'Arial', sans-serif;
     padding: 40px;
     padding-top: 550px; /* Увеличиваем отступ сверху */
-    gap: 40px;
+    gap: 20px;
     min-height: 100vh; /* Минимальная высота для прокрутки */
     overflow: hidden;
   }
   
   .hero {
-    padding: 50px 30px;
-    border-radius: 12px;
-    max-width: 600px;
-    background: transparent;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 32px;
+    backdrop-filter: blur(7px);
+    border-radius: 15px;
+    width: 530px;
+    height: 250px;
+    background: url('/images/giphy.gif');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size:cover;
     z-index: 10;
-    position: relative;
+
+
+
     will-change: transform;
+    border: 1px solid #2e2c2c;
   }
+  
   
   html, body {
     height: 100%; /* Обеспечиваем полную высоту страницы */
+    font-family: 'JetBrains Mono', monospace;
   }
   
   .gradient-text {
     font-size: 48px;
     font-weight: bold;
-    background: linear-gradient(90deg, #00ffcc, #00b3ff);
+    background:linear-gradient(80deg, #29252775,rgba(78, 158, 153, 0.493));
     color: white;
     display: inline-block;
     text-shadow: 0 0 10px rgba(0, 255, 204, 0.7);
@@ -101,13 +112,17 @@ export default {
     text-decoration: none;
     border-radius: 8px;
     transition: 0.3s;
-    display: inline-block;
+
+
   }
   
   .btn-primary {
-    background: linear-gradient(90deg, #00ffcc, #00b3ff);
-    color: black;
+    background:linear-gradient(80deg, #292527be,rgba(78, 158, 153, 0.95));
+    color: rgb(255, 255, 255);
+    
     font-weight: bold;
+    border: 1px solid #2e2c2c;
+
   }
   
   .btn-secondary {
@@ -130,9 +145,10 @@ export default {
   }
   
   .feature {
-    background: rgba(0, 0, 0, 0.596);
+    background:rgba(38, 32, 39, 0.664);
     padding: 20px;
-    border-radius: 10px;
+    backdrop-filter: blur(7px);
+    border-radius: 15px;
     width: 250px;
     border: 1px solid rgb(0, 0, 0);
   }

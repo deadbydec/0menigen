@@ -11,7 +11,7 @@
   
   <style scoped>
   .collect-block {
-    max-width: 250px;
+    max-width: 300px;
     border: 2px solid rgba(0, 0, 0, 0.692);
     height: 350px;
   }

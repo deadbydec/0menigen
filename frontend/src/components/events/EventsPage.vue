@@ -1,62 +1,101 @@
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-6">
-    <h1 class="text-4xl font-black mb-8 tracking-widest"></h1>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
+  <div class="mall-container">
+    <h1></h1>
 
-      <router-link to="/landfill" class="card">
-        <img src="@/assets/Landfill.jpg" alt="Свалка" class="card-img" />
+    <!-- Вертикальный список с прокруткой -->
+    <div class="shop-list">
+      <!-- Генерация карточек событий -->
+      <router-link
+        v-for="event in events"
+        :key="event.category"
+        :to="'/' + event.category"
+        class="shop-card"
+      >
+        <img :src="event.img" :alt="event.name" class="card-img" />
         <div class="card-content">
-          <h2 class="card-title">Свалка</h2>
-          <p class="card-description">
-            Отходы жизни и выброшенные мечты – здесь хаос правит балом.
-          </p>
+          <h2 class="card-title">{{ event.name }}</h2>
+          <p class="card-description">{{ event.description }}</p>
         </div>
       </router-link>
-
-      <router-link to="/black-market" class="card">
-        <img src="@/assets/BlackMarket.jpg" alt="Чёрный рынок" class="card-img" />
-        <div class="card-content">
-          <h2 class="card-title">Чёрный рынок</h2>
-          <p class="card-description">
-            Тайные сделки и тёмные фишки для тех, кто идёт против системы.
-          </p>
-        </div>
-      </router-link>
-
-      <router-link to="/void-gate" class="card">
-        <img src="@/assets/VoidPortal.jpg" alt="Портал в бездну" class="card-img" />
-        <div class="card-content">
-          <h2 class="card-title">Портал в бездну</h2>
-          <p class="card-description">
-            Погрузись в бездну, где логика отдыхает, а хаос витает в воздухе.
-          </p>
-        </div>
-      </router-link>
-
     </div>
   </div>
 </template>
-  
-  <script setup>
-  // Никакого лишнего — роутинг через router-link. Просто чистый визуальный беспредел.
-  </script>
-  
-  <style scoped>
-  .card {
+
+<script setup>
+import { useRouter } from 'vue-router'
+
+const events = [
+  {
+    name: 'Свалка',
+    category: 'landfill',
+    img: new URL('@/assets/Landfill.jpg', import.meta.url),
+    description: 'Отходы жизни и выброшенные мечты – здесь хаос правит балом.'
+  },
+  {
+    name: 'Чёрный рынок',
+    category: 'black-market',
+    img: new URL('@/assets/BlackMarket.jpg', import.meta.url),
+    description: 'Тайные сделки и тёмные фишки для тех, кто идёт против системы.'
+  },
+  {
+    name: 'Портал в бездну',
+    category: 'void-gate',
+    img: new URL('@/assets/VoidPortal.jpg', import.meta.url),
+    description: 'Погрузись в бездну, где логика отдыхает, а хаос витает в воздухе.'
+  }
+]
+
+const router = useRouter()
+
+const enterEvent = (route) => {
+  router.push(route)
+}
+</script>
+
+<style scoped>
+.mall-container {
+  transform: scale(0.9);
+  text-align: center;
+  padding: 20px;
+  height: 100vh; /* Устанавливаем 100% высоты экрана */
+  overflow-y: scroll; /* Прокрутка по всей высоте экрана */
+}
+
+.mall-container::-webkit-scrollbar {
+  width: 0px;  /* Прячем полосу прокрутки */
+}
+
+.mall-container::-webkit-scrollbar-thumb {
+  background: transparent;  /* Оставляем полосу прокрутки полностью прозрачной */
+}
+
+/* Вертикальный список событий */
+.shop-list {
+  display: flex;
+  flex-direction: column;   /* Карточки идут в столбик */
+  gap: 20px;
+  margin-top: 20px;
+  padding-right: 15px;  /* Для прокрутки с правой стороны */
+  padding-bottom: 20px; /* Чтобы нижние карточки не скрывались */
+}
+
+/* Оформление карточек */
+.shop-card {
   width: 100%;
-  border: 1px solid rgb(0, 0, 0);
-  height: 290px;           /* Зафиксировали высоту карточки */
-  max-height: 290px;
-  display: block;
-  background: #0000009a;
-  border-radius: 0.90rem;
-  overflow: hidden;
+  border: 1px solid #000;
+  background: #00000093;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
   text-align: center;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   text-decoration: none;
+  color: #fff;
+  height: 290px; /* Зафиксированная высота карточки */
+  max-width: 90%;
+  margin: 0 auto;
 }
 
-.card:hover {
+.shop-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
 }
@@ -64,17 +103,17 @@
 /* Картинка */
 .card-img {
   width: 100%;
-  height: 180px;
+  height: 180px;  /* Высота изображения */
   object-fit: cover;
   display: block;
+  border-radius: 0.5rem;
 }
 
 /* Контейнер под текст */
 .card-content {
   padding: 0rem 1.5rem 1.8rem;
-  /* убрали flex и overflow, чтобы текст не прятался и не вылезал за блок */
-  height: calc(100% - 180px);
-  box-sizing: border-box;  /* Чтобы учесть padding внутри высоты */
+  height: calc(100% - 180px); /* Учитываем высоту изображения */
+  box-sizing: border-box;
 }
 
 .card-title {
@@ -85,15 +124,10 @@
 }
 
 .card-description {
-
   color: #cfcfcf;
 }
+</style>
 
-h1 {
-  text-shadow: 2px 2px 0 #f00, -2px -2px 0 #0ff;
-}
-  
-  </style>
   
   
   

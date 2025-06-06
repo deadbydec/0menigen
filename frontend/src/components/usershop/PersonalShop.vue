@@ -216,11 +216,12 @@ onMounted(fetchAllItems)
 
 <style scoped lang="scss">
 .personal-shop-wrap {
+  transform: scale(0.9);
   border: 1px solid rgb(0, 0, 0);
   color: #fff;
   padding: 1rem;
   background-color: rgba(0, 0, 0, 0.4);  
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(7px);
   border-radius: 8px;
   width: 850px;
   max-width: 900px;

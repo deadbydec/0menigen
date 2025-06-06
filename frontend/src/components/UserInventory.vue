@@ -1,53 +1,92 @@
 <template>
+  <div class="inv-wrapper">
   <div class="inventory-page">
     <h1>Инвентарь</h1>
     <p class="inventory-count">Всего предметов: {{ inventory.length }}</p>
 
+    <!-- ▸ GRID WRAPPER -->
     <div class="block">
-      <div class="inventory-grid" v-if="inventory.length">
-        <div 
-          v-for="item in inventory" 
-          :key="item.id" 
+      <div v-if="inventory.length" class="inventory-grid">
+        <div
+          v-for="item in inventory"
+          :key="item.id"
           class="inventory-slot"
-          @click="selectItem(item)"
-          :class="{ 'selected-item': selectedItem && selectedItem.id === item.id }"
+          @click="handleItemClick(item)"
+          :class="{
+            'selected-item': selectedItem && selectedItem.id === item.id,
+            'egg-ready':   item.type === 'creature' && isReadyToHatch(item),
+            'egg-running': item.type === 'creature' && item.incubation && !isReadyToHatch(item)
+          }"
           v-tooltip="item.product.description"
         >
-          <img 
-            :src="`${STATIC_BASE}/static/goods/${item.product.image}`" 
-            :alt="item.product.name" 
+          <!-- ▸ ICON -->
+          <img
+            :src="`${STATIC_BASE}/static/goods/${item.product.image}`"
+            :alt="item.product.name"
             @error="onImageError"
           />
+
+          <!-- ▸ TIMER OVERLAY -->
+          <div
+            v-if="item.type === 'creature' && item.incubation && !isReadyToHatch(item)"
+            class="egg-timer-overlay"
+          >
+            {{ formatRemaining(item.incubation.hatch_at) }}
+          </div>
+
+          <!-- ▸ CAPTIONS -->
           <div class="item-name">{{ item.product.name }}</div>
-          <p>Кол-во: {{ item.quantity }}</p>
           <div class="item-rarity" :class="getRarityClass(item.product.rarity)">
             {{ item.product.rarity }}
           </div>
         </div>
       </div>
-
-      <div v-else>
-        <p>Инвентарь пуст.</p>
-      </div>
+      <p v-else>Инвентарь пуст.</p>
     </div>
 
-    <!-- Действия с выбранным предметом -->
-    <div v-if="selectedItem" class="global-inventory-actions">
-      <p class="selected-label">Выбран: {{ selectedItem.product.name }}</p>
-      <div class="inventory-actions">
-        <button @click="useItem" class="use-button">Использовать</button>
-        
-        <!-- Если пользователь Наллвур → кнопка Переработки, иначе Уничтожить -->
-        <button v-if="inventoryStore.userRace === 'nullvour'" @click="inventoryStore.recycleItem">
+    <!-- ▸ GLOBAL ACTIONS -->
+    <div
+  v-if="selectedItem && !(isEggRunning || isEggReady)"
+  class="global-inventory-actions"
+>
+  <p class="selected-label">
+    Выбран: {{ selectedItem.product.name }}
+  </p>
+
+  <div class="inventory-actions">
+    <!-- если косметика — показываем только «в гардероб» -->
+  <button
+    v-if="selectedItem.product.product_type === 'косметический'"
+    class="wardrobe-button"
+    @click="sendToWardrobe(selectedItem.id)"
+  >
+    В гардероб
+  </button>
+    <!-- единая кнопка (инкубация / использование) -->
+    <button
+    v-else
+      class="use-button"
+      :disabled="isEggRunning"
+      @click="handlePrimary"
+    >
+      {{ primaryLabel }}
+    </button>
+
+    
+
+        <!-- переработка / выбросить -->
+        <button
+          v-if="inventoryStore.userRace === 'nullvour'"
+          @click="inventoryStore.recycleItem"
+        >
           Переработка
         </button>
-        <button v-else @click="inventoryStore.destroyItem">
-          Выбросить
-        </button>
+        <button v-else @click="inventoryStore.destroyItem">Выбросить</button>
 
+        <!-- подарок / сейф -->
         <button @click="giftModalOpen = true" class="gift-button">Подарить</button>
-        <button @click="sendToVault">В сейф</button>
-
+        <button @click="sendToVault">В&nbsp;сейф</button>
+        </div>
         <GiftModal
           v-if="giftModalOpen"
           :visible="giftModalOpen"
@@ -57,95 +96,269 @@
         />
       </div>
     </div>
+
+    <!-- ▸ HATCH MODAL -->
+    <HatchModal
+  :visible="showHatchModal"
+  :incubation-id="selectedItem?.incubation?.id"
+  @close="showHatchModal = false"
+  @hatched="handleHatched"
+/>
   </div>
+
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, computed, ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useInventoryStore } from '@/store/inventory'
-import GiftModal from "./GiftModal.vue"
+import GiftModal from './GiftModal.vue'
+import HatchModal from '@/components/HatchModal.vue'
+import api from '@/utils/axios'
+import { useWardrobeStore } from '@/store/wardrobe'
+const wardrobeStore = useWardrobeStore()
+import { useToastStore } from '@/store/toast'
 
+/* ▸ CONSTS */
 const STATIC_BASE = import.meta.env.VITE_STATIC_URL || 'https://localhost:5002'
 
+const toast = useToastStore()
+/* ▸ STORE + STATE */
 const inventoryStore = useInventoryStore()
-const inventory = computed(() => inventoryStore.inventory)
-const selectedItem = computed(() => inventoryStore.selectedItem)
-const fetchInventory = inventoryStore.fetchInventory
-const selectItem = inventoryStore.selectItem
-const useItem = inventoryStore.useItem
-const destroyItem = inventoryStore.destroyItem
-const giftModalOpen = ref(false)
+const inventory     = computed(() => inventoryStore.inventory)
+const selectedItem  = computed(() => inventoryStore.selectedItem)   // 💡 только читаем
+
+/* ▸ UI FLAGS */
+const giftModalOpen  = ref(false)
+const showHatchModal = ref(false)
+const petName        = ref('')
+
+/* ▸ TIMER TICK (для овера модуля) */
+const nowTick = ref(Date.now())
+let timerId
+onMounted(() => {
+  inventoryStore.fetchInventory()
+  timerId = setInterval(() => (nowTick.value = Date.now()), 1000)
+})
+onUnmounted(() => {
+  clearInterval(timerId)
+  inventoryStore.selectItem(null)
+})
+
+/* ▸ HELPERS & COMPUTEDS */
+function isReadyToHatch(item) {
+  return (
+    item &&
+    item.type === 'creature' &&
+    item.incubation &&
+    new Date(item.incubation.hatch_at).getTime() <= nowTick.value
+  )
+}
+
+const isEgg        = computed(() => selectedItem.value?.type === 'creature')
+const isEggRunning = computed(
+  () => isEgg.value && selectedItem.value.incubation && !isReadyToHatch(selectedItem.value)
+)
+const isEggReady = computed(() => isEgg.value && isReadyToHatch(selectedItem.value))
+
+const primaryLabel = computed(() => {
+  if (selectedItem.value?.product?.product_type === "cosmetic") {
+    return "В гардероб"
+  }
+
+  if (isEgg.value && !selectedItem.value.incubation) return 'Инкубировать'
+  if (isEggRunning.value) return 'Вылупление…'
+  return 'Использовать'
+})
+
+function formatRemaining(hatchISO) {
+  const diff = Math.max(0, Math.floor((new Date(hatchISO) - nowTick.value) / 1000))
+  const m = String(Math.floor(diff / 60)).padStart(2, '0')
+  const s = String(diff % 60).padStart(2, '0')
+  return `${m}:${s}`
+}
+
+/* ▸ CLICK HANDLERS */
+function handleItemClick(item) {
+  inventoryStore.selectItem(item)
+
+  if (item.type === 'creature' && isReadyToHatch(item)) {
+    petName.value = ''
+    showHatchModal.value = true
+  }
+}
+
+function handleHatched(data) {
+  inventoryStore.selectItem(null)
+  inventoryStore.fetchInventory()
+}
+
+async function handlePrimary () {
+  if (!selectedItem.value) return
+
+  // 💄 КОСМЕТИКА → в гардероб
+  if (selectedItem.value?.product?.product_type === "cosmetic")
+ {
+    await sendToWardrobe(selectedItem.value.id)
+    return
+  }
+
+  // 🥚 ИНКУБАЦИЯ
+  if (isEgg.value && !selectedItem.value.incubation) {
+    await inventoryStore.incubateItem()
+  }
+
+  // 🧪 ОБЫЧНОЕ ИСПОЛЬЗОВАНИЕ
+  else if (!isEgg.value) {
+    await inventoryStore.useItem()
+  }
+}
+
 
 async function sendToVault() {
   if (!selectedItem.value) return
   try {
     await inventoryStore.sendToVault(selectedItem.value.id, 1)
-    alert("Предмет отправлен в сейф!")
+    alert('Предмет отправлен в сейф!')
   } catch (err) {
-    console.error("Ошибка при отправке в сейф", err)
-    alert(err.response?.data?.detail || "Не удалось отправить предмет в сейф")
+    console.error('Ошибка при отправке в сейф', err)
+    alert(err.response?.data?.detail || 'Не удалось отправить предмет в сейф')
   }
 }
+
+const sendToWardrobe = async (itemId) => {
+  try {
+    await wardrobeStore.addToWardrobe(itemId)
+    toast.addToast('🎽 Отправлено в гардероб!', { type: 'success' })
+  } catch (err) {
+    toast.addToast('❌ Не удалось добавить в гардероб', { type: 'error' })
+  }
+}
+
 
 function onImageError(e) {
   e.target.src = `${STATIC_BASE}/static/goods/no_image.png`
 }
 
-onMounted(() => fetchInventory())
-onUnmounted(() => {
-  inventoryStore.selectedItem = null
-})
+/* ▸ HATCH */
+const router = useRouter()
+async function submitHatch() {
+  try {
+    const { data } = await api.post(
+      '/api/pets/hatch',
+      { name: petName.value },
+      { withCredentials: true }
+    )
+    showHatchModal.value = false
+    inventoryStore.selectItem(null)
+    await inventoryStore.fetchInventory()
+    router.push(`/pet/${data.id}`)
+  } catch (err) {
+    console.error(err)
+    alert('Не удалось вылупить яйцо :(')
+  }
+}
 
+/* ▸ COLOR BY RARITY */
 function getRarityClass(rarity) {
   switch (rarity) {
-    case 'мусорный': return 'rarity-trash';
-    case 'обычный': return 'rarity-common';
-    case 'призовой': return 'rarity-prize';
-    case 'особый': return 'rarity-special';
-    case 'эпический': return 'rarity-epic';
-    case 'редкий': return 'rarity-rare';
-    case 'легендарный': return 'rarity-legendary';
-    case 'уникальный': return 'rarity-unique';
-    case 'древний': return 'rarity-elder';
-    case 'исчезнувший': return 'rarity-vanished';
-    case 'глитчевый': return 'rarity-glitched';
-    case 'пустотный': return 'rarity-void';
-    default: return '';
+    case 'мусорный':   return 'rarity-trash'
+    case 'обычный':    return 'rarity-common'
+    case 'призовой':   return 'rarity-prize'
+    case 'особый':     return 'rarity-special'
+    case 'эпический':  return 'rarity-epic'
+    case 'редкий':     return 'rarity-rare'
+    case 'легендарный':return 'rarity-legendary'
+    case 'уникальный': return 'rarity-unique'
+    case 'древний':    return 'rarity-elder'
+    case 'исчезнувший':return 'rarity-vanished'
+    case 'глитчевый':  return 'rarity-glitched'
+    case 'пустотный':  return 'rarity-void'
+    default:           return ''
   }
 }
 </script>
 
 <style scoped lang="scss">
 /* Убираем лишние стили для body */
+
+$glass-bg: rgba(255, 255, 255, 0.05);
+$glass-border: rgba(255, 255, 255, 0.1);
+$glass-hover: rgba(255, 255, 255, 0.08);
+$accent: #d6dcdda6;
+
+
+body {
+  overflow-y: scroll;
+  height: 100vh;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Убираем дефолтные стили */
 html, body {
   margin: 0;
   padding: 0;
-  background: #f0f0f0;
-  overflow-y: auto; /* Скролл пойдёт по всей странице */
+
+  font-family: 'JetBrains Mono', monospace;
 }
 
+
 /* Блок со всем контентом инвентаря. Ставим масштаб 80%. */
+.inv-wrapper {
+  background:rgba(38, 32, 39, 0.48);
+  overflow-y: auto;
+  border: 1px solid rgb(36, 35, 37);
+  margin: 0 auto;
+  padding: 10px;
+  border-radius: 17px;
+
+
+  transform-origin: top center;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+
+  /* Скрываем скроллбар, но сохраняем прокрутку */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE и Edge */
+
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
+}
+
 .inventory-page {
+  /* Снимаем лишние отступы, ставим масштаб 80% */
   margin: 0 auto;
   padding: 10px;
   transform: scale(0.8);
   transform-origin: top center;
   text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+}
 
-  h1 {
-    margin: 0 0 15px;
-    font-size: 24px;
-    font-weight: 700;
-  }
+h1 {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px 14px;
 
-  .inventory-count {
+  border-radius: 12px;
+  display: inline-block;
+
+
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.inventory-count {
     margin-bottom: 10px;
   }
-}
+
 
 /* Сетка, аналогичная магазину */
 .inventory-grid {
   display: grid;
+  font-family: 'JetBrains Mono', monospace;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 1rem;
   max-width: 1000px;
@@ -154,21 +367,22 @@ html, body {
 
 /* Карточка предмета */
 .inventory-slot {
+  will-change: transform;
   position: relative;
+  font-family: 'JetBrains Mono', monospace;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 6px;
-  border: 1px solid #303030;
+  border: 1px solid #2e2c2c;
   border-radius: 9px;
-  background-color: #f9f9f9cc;
-  transition: transform 0.2s, box-shadow 0.2s;
+  background:linear-gradient(80deg, #cfcdceb2,rgba(197, 228, 226, 0.664));
+  transition: transform 0.2;
   text-align: center;
   overflow: hidden;
 
   &:hover {
     transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 
   img {
@@ -176,6 +390,7 @@ html, body {
     height: 110px;
     object-fit: contain;
     margin-bottom: 3px;
+    cursor: pointer;
   }
 
   p {
@@ -226,7 +441,7 @@ html, body {
 .selected-item {
   outline: 2px solid white;
   transform: scale(1.03);
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+
 }
 
 /* Блок с кнопками */
@@ -248,7 +463,7 @@ html, body {
     transition: all 0.2s ease-in-out;
     width: fit-content;
     max-width: 140px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+
   }
 }
 
@@ -258,7 +473,7 @@ html, body {
   color: white;
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+
   }
 }
 
@@ -267,7 +482,7 @@ html, body {
   color: white;
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+
   }
 }
 
@@ -276,8 +491,30 @@ html, body {
   color: white;
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+
   }
+}
+
+/* всегда относительный контекст — для любых оверлеев */
+.inventory-slot {
+  position: relative;          // 🔑 перемещено из .egg-running
+}
+
+/* ───── 1. Визуальная «маска», когда яйцо инкубируется ───── */
+.inventory-slot.egg-running::after,
+.inventory-slot.egg-ready::after {
+  content: '';
+  position: absolute;
+  inset: 0;                    // top:0; right:0; bottom:0; left:0;
+  background: rgba(0, 0, 0, 0.45);   // полупрозрачный слой
+  backdrop-filter: blur(1px);        // лёгкое размытие
+  border-radius: inherit;
+  z-index: 2;                  // выше картинки, ниже таймера
+}
+
+/* таймер рисуем поверх маски */
+.egg-timer-overlay {
+  z-index: 3;                  // было 2 — увеличили, чтобы оказаться над ::after
 }
 </style>
 

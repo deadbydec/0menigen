@@ -1,14 +1,15 @@
 import json
 import enum
 from datetime import datetime, timezone, date
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, select, Float, ARRAY, TIMESTAMP, Date, func, JSON
-from sqlalchemy.dialects.postgresql import INET
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, select, Float, ARRAY, TIMESTAMP, Date, func, JSON, UniqueConstraint, Index, text
+from sqlalchemy.dialects.postgresql import INET, JSONB
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from config import Config
 from sqlalchemy.orm import selectinload
 from sqlalchemy import Enum as SqlEnum
 from database import async_session, Base  # ✅ Теперь используется правильный sessionmaker!
+from sqlalchemy.ext.mutable import MutableList
 
 
 # Асинхронный движок базы данных
@@ -62,9 +63,11 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     username = Column(String(100), unique=True, nullable=False, index=True)
-    nicknames = Column(ARRAY(String), default=[])
+    nicknames = Column(MutableList.as_mutable(ARRAY(String)), default=list)
     password = Column(String(200), nullable=False)
     email = Column(String(120), unique=True, nullable=True)
+    is_email_confirmed = Column(Boolean, default=False)
+    email_token = Column(String, nullable=True)
     avatar = Column(String(200), nullable=False, default='default_avatar.png')
     bio = Column(String(500), default='Напишите о себе...')
     coins = Column(Integer, default=500)
@@ -76,7 +79,7 @@ class User(Base):
     gender = Column(SqlEnum(GenderEnum, name="gender"), default=GenderEnum.UNKNOWN, nullable=False)
     birthdate = Column(Date, nullable=True)
     user_type = Column(SqlEnum(UserType, name="user_type"), nullable=False, default=UserType.OMEZKA)
-    last_ips = Column(ARRAY(INET), default=[])
+    last_ips  = Column(MutableList.as_mutable(ARRAY(INET)),   default=list)
     warning_count = Column(Integer, default=0)
     registration_date = Column(TIMESTAMP(timezone=True), default=func.now())
     last_login = Column(TIMESTAMP(timezone=True), default=func.now(), onupdate=func.now())
@@ -85,22 +88,33 @@ class User(Base):
     shop_balance = Column(Integer, default=0)
     vault_balance = Column(Integer, default=0)  # Монеты в сейфе
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
+    pet_slots = Column(Integer, default=3)  # 💡 по умолчанию 3 питомца
     
     race = relationship("Race", backref="players")  # Связь с расой
     toilet_doom = relationship("ToiletDoom", back_populates="user", uselist=False, cascade="all, delete-orphan")
-    wall_posts = relationship("WallPost", back_populates="user", lazy="selectin")
     sent_gifts = relationship("PendingGift", foreign_keys="[PendingGift.sender_id]", back_populates="sender")
     received_gifts = relationship("PendingGift", foreign_keys="[PendingGift.recipient_id]", back_populates="recipient")
     game_scores = relationship("GameScore", back_populates="user")
     sent_friend_requests = relationship("Friendship", foreign_keys="[Friendship.user_id]", back_populates="user")
     received_friend_requests = relationship("Friendship", foreign_keys="[Friendship.friend_id]", back_populates="friend")
     system_messages = relationship("SystemMessage", back_populates="recipient")
-    wall_posts = relationship("WallPost", back_populates="user", cascade="all, delete-orphan")
+    wall_posts = relationship(
+    "WallPost",
+    back_populates="user",
+    lazy="selectin",
+    cascade="all, delete-orphan"
+)
     role = relationship("Role", back_populates="users")
     landfill_pickups = relationship("LandfillPickupLimit", back_populates="user", cascade="all, delete-orphan")
     thrown_items = relationship("LandfillItem", back_populates="thrown_by", cascade="all, delete-orphan")
     shop_items = relationship("PersonalShopItem", back_populates="user", cascade="all, delete")
     vault_items = relationship("VaultItem", back_populates="user", cascade="all, delete-orphan")
+    pets = relationship("Pet", back_populates="user", cascade="all, delete-orphan")
+    pet_wardrobe = relationship(
+    "UserPetWardrobeItem",
+    back_populates="user",
+    cascade="all, delete-orphan"
+)
 
     def get_xp_to_next_level(self) -> int:
         return 100 + (self.level * 20)
@@ -170,35 +184,76 @@ class WallPost(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     text = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
+    # 🔗 Автоматическая связь с пользователем
     user = relationship("User", back_populates="wall_posts")
+    comments = relationship("WallComment", back_populates="post", cascade="all, delete-orphan")
+    likes = relationship("WallLike", back_populates="post", cascade="all, delete-orphan")
 
-    async def to_dict(self):
-        """Конвертирует пост в JSON-объект"""
+
+
+    async def to_dict(self, include_author=False, current_user_id=None):
         return {
             "id": self.id,
             "user_id": self.user_id,
             "text": self.text,
-            "created_at": self.created_at.isoformat()
+            "created_at": self.created_at.isoformat(),
+            "likes": len(self.likes),
+            "liked_by_me": any(l.user_id == current_user_id for l in self.likes) if current_user_id else False,
+            "author": {
+                "id": self.user.id,
+                "username": self.user.username
+            } if include_author and self.user else None
         }
 
     @staticmethod
-    async def get_wall_posts(user_id):
-        """Возвращает все посты пользователя (ASYNC)"""
+    async def get_wall_posts(user_id: int):
+        """Вернёт все посты пользователя с предзагрузкой user"""
         async with async_session() as session:
             result = await session.execute(
-                WallPost.__table__.select().where(WallPost.user_id == user_id).order_by(WallPost.created_at.desc())
+                select(WallPost)
+                .options(selectinload(WallPost.user))
+                .where(WallPost.user_id == user_id)
+                .order_by(WallPost.created_at.desc())
             )
             return result.scalars().all()
 
     @staticmethod
-    async def add_wall_post(user_id, text):
-        """Создаёт новый пост на стене пользователя (ASYNC)"""
+    async def add_wall_post(user_id: int, text: str):
+        """Создаёт и возвращает пост"""
         async with async_session() as session:
-            new_post = WallPost(user_id=user_id, text=text)
-            session.add(new_post)
-            await session.commit()   
+            post = WallPost(user_id=user_id, text=text)
+            session.add(post)
+            await session.commit()
+            await session.refresh(post)
+            return post 
+
+
+class WallComment(Base):
+    __tablename__ = "wall_comments"
+
+    id = Column(Integer, primary_key=True)
+    post_id = Column(Integer, ForeignKey("wall_posts.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+    user = relationship("User")  # можно добавить back_populates при желании
+    post = relationship("WallPost", back_populates="comments")
+
+class WallLike(Base):
+    __tablename__ = "wall_likes"
+
+    id = Column(Integer, primary_key=True)
+    post_id = Column(Integer, ForeignKey("wall_posts.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    __table_args__ = (
+    UniqueConstraint("post_id", "user_id", name="uq_wall_like_post_user"),
+)
+    post = relationship("WallPost", back_populates="likes")
+    user = relationship("User")
 
 
 class Friendship(Base):
@@ -399,7 +454,7 @@ class ProductType(enum.Enum):
     toy = "игрушка"
     souvenir = "сувенир"
     artifact = "артефакт"
-    creature = "существо"
+    creature = "creature"
     book = "книга"
     tech = "гаджет"
     sticker = "наклейка"
@@ -407,18 +462,27 @@ class ProductType(enum.Enum):
 
 
 class ProductRarity(enum.Enum):
+    #все предметы из игровых магазинов с шансом:
     trash = "мусорный"
+    frequent = "частый"
     common = "обычный"
-    prize = "призовой"
     rare = "редкий"
+    valuable = "ценный"  # 💰 сюда!
     epic = "эпический"
     legendary = "легендарный"
-    special = "особый"
-    unique = "уникальный"
-    elder = "древний"
-    vanished = "исчезнувший"
-    glitched = "глитчевый"
-    void = "пустотный"
+    relict = "реликтовый"   # 🧬 новый elder
+
+    vanished = "исчезнувший" #предметы, выведенные из игры
+    
+    prize = "призовой" #предметы за участие в мини-играх
+    
+    special = "особый" #ивентовые и другие предметы
+    
+    unique = "уникальный" #уникальные предметы под заказ
+    
+    glitched = "глитчевый" #предметы из донат-шопа
+    
+    void = "пустотный" #рандомные предметы из разлома
 
     
 
@@ -431,14 +495,19 @@ class Product(Base):
     image = Column(String(100), nullable=True)  # Добавляем поле для изображения
     rarity = Column(SqlEnum(ProductRarity, name="product_rarity"), nullable=False, default=ProductRarity.common)
     product_type = Column(SqlEnum(ProductType, name="product_type"), nullable=False, default=ProductType.drink)
-    stock = Column(Integer, default=0)  # количество в наличии
+    stock = Column(Integer, nullable=False, default=1)
+    custom = Column(JSON, default=dict)
     is_nulling_only = Column(Boolean, default=False)  # 🔥 Только за нуллинги
     nulling_price = Column(Float, default=0.0)  # Цена в нуллингах, если is_nulling_only=True
 
 
     items = relationship('InventoryItem', back_populates='product', cascade="all, delete-orphan")
     shop_entries = relationship("PersonalShopItem", back_populates="product", cascade="all, delete")
-
+    wardrobe_entries = relationship(
+    "UserPetWardrobeItem",
+    back_populates="product",
+    cascade="all, delete-orphan"
+)
 
     def __repr__(self):
         return f"<Product {self.name}, Type: {self.product_type.value}, Rarity: {self.rarity.value}>"
@@ -454,6 +523,17 @@ class InventoryItem(Base):
     product = relationship('Product', back_populates='items')
     user = relationship("User", backref="inventory")
     gift_links = relationship("PendingGift", back_populates="item")
+    incubation = relationship(
+    "Incubation",
+    uselist=False,                      # 👈 ОБЯЗАТЕЛЬНО! один к одному
+    back_populates="inventory_item",
+    lazy="joined"                       # или "selectin"
+)
+
+
+    def is_locked(self):
+        return self.incubation is not None and not self.incubation.is_hatched
+
 
 
 
@@ -834,3 +914,189 @@ class VaultItem(Base):
 
     user = relationship("User", back_populates="vault_items")
     product = relationship("Product")
+
+
+class Pet(Base):
+    __tablename__ = "pets"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), index=True)
+    image = Column(String(255), nullable=True)
+    name = Column(String(100), default="Unnamed")
+    birthdate = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    race_code = Column(String(50))
+    level = Column(Integer, default=1)
+    intelligence = Column(Integer, default=0)
+    fullness = Column(Integer, default=50)
+    energy = Column(Integer, default=100)
+    health = Column(Integer, default=100)
+    mood = Column(String(50), default="neutral")
+    bond = Column(Integer, default=0)
+    trait = Column(String(100), nullable=True)
+    favorite_foods = Column(JSON, default=list)
+    anomaly_level = Column(Integer, default=0)
+    ai_persona = Column(String(50), default="silent")
+    created_at = Column(DateTime, default=func.now())
+    last_update = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    appearance = relationship("PetAppearance", back_populates="pet",
+                              cascade="all, delete-orphan")
+    user = relationship("User", back_populates="pets")
+
+
+class Incubation(Base):
+    __tablename__ = "pet_incubation"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id"))
+    inventory_item_id = Column(Integer, ForeignKey("user_inventory.id"), nullable=True)
+    started_at = Column(DateTime(timezone=True))
+    hatch_at   = Column(DateTime(timezone=True))
+    is_hatched = Column(Boolean, default=False)
+    __table_args__ = (
+        Index(
+            "uq_one_active_incubation",
+            "user_id",
+            unique=True,
+            postgresql_where=text("is_hatched = false")
+        ),
+    )
+
+    # 🔄 relationships
+    user = relationship("User", backref="incubations")
+    inventory_item = relationship("InventoryItem", back_populates="incubation")
+    
+
+class WardrobeSlot(str, enum.Enum):
+    background = "фон"
+    aura       = "окружение"
+    companion       = "спутник"
+    body    = "тело"    
+    interior = "интерьер"
+    dye = "эссенция" #это и есть краски на базу питомца
+    makeup = "макияж"
+    paws = "лапы"
+    wings   = "крылья"
+    eyes    = "глаза"
+    head    = "голова"
+    tail    = "хвост"
+    accessory   = "аксессуар"
+    face    = "морда"
+    skin    = "покров"
+    base = "база" #базовый слой (питомец) в редакторе
+    foreground = "передний план"
+    tattoo = "татуировка"
+    glow = "свечение" 
+    floor      = "пол"
+    neck = "шея"
+    ears = "уши"
+    gadget = "гаджет"
+
+class UserPetWardrobeItem(Base):
+    __tablename__ = "user_pet_wardrobe_items"
+
+    id        = Column(Integer, primary_key=True)
+    user_id   = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), index=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    slot      = Column(SqlEnum(WardrobeSlot), nullable=False)
+    quantity  = Column(Integer, default=1)
+
+    user    = relationship("User", back_populates="pet_wardrobe")
+    product = relationship("Product", back_populates="wardrobe_entries", lazy="joined")
+
+
+
+
+class PetAppearance(Base):
+    __tablename__ = "pet_appearance"
+
+    id          = Column(Integer, primary_key=True)
+    pet_id      = Column(Integer, ForeignKey("pets.id", ondelete="CASCADE"), index=True)
+    slot        = Column(SqlEnum(WardrobeSlot), nullable=False)
+    product_id = Column(
+    Integer,
+    ForeignKey("products.id", ondelete="SET NULL"),
+    nullable=True  # 🔥 теперь разрешён NULL
+)
+    layer_index = Column(Integer, nullable=False, default=0)
+    wardrobe_id = Column(Integer, ForeignKey("user_pet_wardrobe_items.id"))
+
+
+    updated_at  = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    created_at  = Column(DateTime(timezone=True), default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("pet_id", "slot", "layer_index", name="uq_pet_slot_layer"),
+        Index("ix_pet_slot", "pet_id", "slot"),
+    )
+
+    pet     = relationship("Pet", back_populates="appearance")
+    product = relationship("Product", lazy="joined")
+
+
+
+
+class PetRenderConfig(Base):
+    __tablename__ = "pet_render_config"
+
+    pet_id = Column(Integer, ForeignKey("pets.id", ondelete="CASCADE"), primary_key=True)
+    slot_order = Column(JSONB, default=list)  # ⬅️ здесь теперь JSONB
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+
+    pet = relationship("Pet", backref="render_config", uselist=False)
+
+
+class PetRenderSnapshot(Base):
+    __tablename__ = "pet_render_snapshots"
+
+    id = Column(Integer, primary_key=True)
+    pet_id = Column(Integer, ForeignKey("pets.id", ondelete="CASCADE"), index=True)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), index=True)
+    theme = Column(String(100), nullable=True)
+
+
+    slot_order = Column(MutableList.as_mutable(ARRAY(Integer)), default=list)
+    appearance = Column(JSON, nullable=False)  # полный snapshot appearance = {slot: [product_id]}
+    image_url = Column(String, nullable=True)  # если срендерили png заранее
+    submitted_at = Column(DateTime(timezone=True), server_default=func.now())
+    votes = Column(Integer, default=0)
+
+    contest_id = Column(Integer, ForeignKey("contests.id", ondelete="SET NULL"), nullable=True)
+
+    __table_args__ = (
+    UniqueConstraint("pet_id", "contest_id", name="uq_pet_contest_snapshot"),
+)
+
+
+    # ❗ если pet потом удалят — snapshot останется
+    pet = relationship("Pet", backref="render_snapshots")
+    user = relationship("User")
+ 
+    def to_dict(self):
+            return {
+            "id": self.id,
+            "pet_id": self.pet_id,
+            "user_id": self.user_id,
+            "slot_order": self.slot_order,
+            "appearance": self.appearance,
+            "image_url": self.image_url,
+            "submitted_at": self.submitted_at.isoformat(),
+            "contest_id": self.contest_id,
+            "votes": self.votes,
+            "theme": self.theme,
+            }
+
+class Contest(Base):
+    __tablename__ = "contests"
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String(100), nullable=False)
+    description = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+
+
+
+
+
+

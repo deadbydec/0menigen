@@ -14,6 +14,7 @@ function getCookie(name) {
 
 // 📌 Импортируем все компоненты
 import MainLayout from "@/components/layout/MainLayout.vue";
+import AuthLayout from "@/components/layout/AuthLayout.vue";
 import HomePage from "@/components/HomePage.vue";
 import UserAuth from "@/components/auth/UserAuth.vue";
 import UserProfile from "@/components/profile/UserProfile.vue";
@@ -35,18 +36,27 @@ import VoidGate from '@/components/events/VoidGate.vue';
 import PersonalShop from '@/components/usershop/PersonalShop.vue';
 import ShopSearch from '@/components/usershop/ShopSearch.vue';
 import UserSafe from '@/components/UserSafe.vue';
-
+import MyPets from '@/components/pets/MyPets.vue';
+import PetProfile from '@/components/pets/PetProfile.vue';
+import PetWardrobe from '@/components/PetWardrobe.vue';
 
 
 
 // 🔥 Определяем маршруты
 const routes = [
   {
+  path: "/login",
+  component: AuthLayout,
+  children: [
+    { path: "", component: UserAuth },
+    { path: "home", component: HomePage },
+  ]
+},
+  {
     path: "/",
     component: MainLayout,
     children: [
       { path: "", redirect: "/home" },
-      { path: "login", component: UserAuth },
       { path: "news", component: NewsPage, meta: { requiresAuth: true } },
       { path: "home", component: HomePage, meta: { requiresAuth: true } },     
       { path: "profile", component: UserProfile, meta: { requiresAuth: true } },
@@ -57,6 +67,10 @@ const routes = [
       { path: '/blackmarket', component: BlackMarket, meta: { requiresAuth: true } },
       { path: '/voidgate', component: VoidGate, meta: { requiresAuth: true } },
       { path: "players", component: PlayersSearch, meta: { requiresAuth: true } },
+
+      { path: '/mypets', component: MyPets, meta: { requiresAuth: true } },
+      {path: '/pet/:id', component: PetProfile, meta: { requiresAuth: true }, props: true },
+      { path: "wardrobe", component: PetWardrobe, meta: { requiresAuth: true } },
 
       { path: "personalshop", component: PersonalShop, meta: { requiresAuth: true } },
       { path: "shopsearch", component: ShopSearch, meta: { requiresAuth: true } },
@@ -93,18 +107,13 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to, from, next) => {
-  const authStore = useAuthStore();
+  const auth = useAuthStore();
+  if (!auth.authReady) await auth.fetchUser();
 
-  if (!authStore.userLoaded) {
-    await authStore.fetchUser();
-  }
-
-  if (authStore.isLoggedIn && !authStore.user?.race_id && to.path !== "/origin") {
-    return next("/origin");
-  }
-
+  if (to.meta.requiresAuth && !auth.isAuthenticated) return next("/login");
   next();
 });
+
 
 export default router;
 
