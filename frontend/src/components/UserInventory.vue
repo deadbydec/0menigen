@@ -1,113 +1,3 @@
-<template>
-  <div class="inv-wrapper">
-  <div class="inventory-page">
-    <h1>Инвентарь</h1>
-    <p class="inventory-count">Всего предметов: {{ inventory.length }}</p>
-
-    <!-- ▸ GRID WRAPPER -->
-    <div class="block">
-      <div v-if="inventory.length" class="inventory-grid">
-        <div
-          v-for="item in inventory"
-          :key="item.id"
-          class="inventory-slot"
-          @click="handleItemClick(item)"
-          :class="{
-            'selected-item': selectedItem && selectedItem.id === item.id,
-            'egg-ready':   item.type === 'creature' && isReadyToHatch(item),
-            'egg-running': item.type === 'creature' && item.incubation && !isReadyToHatch(item)
-          }"
-          v-tooltip="item.product.description"
-        >
-          <!-- ▸ ICON -->
-          <img
-            :src="`${STATIC_BASE}/static/goods/${item.product.image}`"
-            :alt="item.product.name"
-            @error="onImageError"
-          />
-
-          <!-- ▸ TIMER OVERLAY -->
-          <div
-            v-if="item.type === 'creature' && item.incubation && !isReadyToHatch(item)"
-            class="egg-timer-overlay"
-          >
-            {{ formatRemaining(item.incubation.hatch_at) }}
-          </div>
-
-          <!-- ▸ CAPTIONS -->
-          <div class="item-name">{{ item.product.name }}</div>
-          <div class="item-rarity" :class="getRarityClass(item.product.rarity)">
-            {{ item.product.rarity }}
-          </div>
-        </div>
-      </div>
-      <p v-else>Инвентарь пуст.</p>
-    </div>
-
-    <!-- ▸ GLOBAL ACTIONS -->
-    <div
-  v-if="selectedItem && !(isEggRunning || isEggReady)"
-  class="global-inventory-actions"
->
-  <p class="selected-label">
-    Выбран: {{ selectedItem.product.name }}
-  </p>
-
-  <div class="inventory-actions">
-    <!-- если косметика — показываем только «в гардероб» -->
-  <button
-    v-if="selectedItem.product.product_type === 'косметический'"
-    class="wardrobe-button"
-    @click="sendToWardrobe(selectedItem.id)"
-  >
-    В гардероб
-  </button>
-    <!-- единая кнопка (инкубация / использование) -->
-    <button
-    v-else
-      class="use-button"
-      :disabled="isEggRunning"
-      @click="handlePrimary"
-    >
-      {{ primaryLabel }}
-    </button>
-
-    
-
-        <!-- переработка / выбросить -->
-        <button
-          v-if="inventoryStore.userRace === 'nullvour'"
-          @click="inventoryStore.recycleItem"
-        >
-          Переработка
-        </button>
-        <button v-else @click="inventoryStore.destroyItem">Выбросить</button>
-
-        <!-- подарок / сейф -->
-        <button @click="giftModalOpen = true" class="gift-button">Подарить</button>
-        <button @click="sendToVault">В&nbsp;сейф</button>
-        </div>
-        <GiftModal
-          v-if="giftModalOpen"
-          :visible="giftModalOpen"
-          :item-id="selectedItem?.id"
-          :item-name="selectedItem?.product.name"
-          @close="giftModalOpen = false"
-        />
-      </div>
-    </div>
-
-    <!-- ▸ HATCH MODAL -->
-    <HatchModal
-  :visible="showHatchModal"
-  :incubation-id="selectedItem?.incubation?.id"
-  @close="showHatchModal = false"
-  @hatched="handleHatched"
-/>
-  </div>
-
-</template>
-
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -116,9 +6,12 @@ import GiftModal from './GiftModal.vue'
 import HatchModal from '@/components/HatchModal.vue'
 import api from '@/utils/axios'
 import { useWardrobeStore } from '@/store/wardrobe'
-const wardrobeStore = useWardrobeStore()
 import { useToastStore } from '@/store/toast'
+import { useTooltipStore } from '@/store/tooltipStore'
 
+const wardrobeStore = useWardrobeStore()
+
+const tooltip = useTooltipStore()
 /* ▸ CONSTS */
 const STATIC_BASE = import.meta.env.VITE_STATIC_URL || 'https://localhost:5002'
 
@@ -229,11 +122,19 @@ async function sendToVault() {
 const sendToWardrobe = async (itemId) => {
   try {
     await wardrobeStore.addToWardrobe(itemId)
+
+    // Удаляем предмет из инвентаря вручную
+    inventoryStore.inventory = inventoryStore.inventory.filter(item => item.id !== itemId)
+
+    // Сброс выбора
+    inventoryStore.selectItem(null)
+
     toast.addToast('🎽 Отправлено в гардероб!', { type: 'success' })
   } catch (err) {
     toast.addToast('❌ Не удалось добавить в гардероб', { type: 'error' })
   }
 }
+
 
 
 function onImageError(e) {
@@ -277,81 +178,186 @@ function getRarityClass(rarity) {
     default:           return ''
   }
 }
+
+//const wrapperMarginTop = computed(() => {
+ // const count = inventory.value.length
+
+ // if (count > 50) return "1700px"
+ // if (count > 45) return "1500px"
+ // if (count > 40) return "1300px"
+ // if (count > 35) return "1100px"
+ // if (count > 30) return "900px"
+ // if (count > 25) return "700px"
+ // if (count > 20) return "500px"
+ // if (count > 15) return "300px"
+ // if (count > 10) return "100px"
+ // if (count > 5) return "50px"
+ // return "50px"
+//})
+
 </script>
 
-<style scoped lang="scss">
+
+
+
+<template>
+  <div class="page-inner">
+    
+    <div class="inventory-layout">
+        <!-- 🧷 ПАНЕЛЬ С ДЕЙСТВИЯМИ (СЛЕВА) -->
+        <div
+          class="inventory-actions-panel"
+          v-if="selectedItem && !(isEggRunning || isEggReady)"
+        >
+          <p class="selected-label">
+            Выбрано: {{ selectedItem.product.name }}
+          </p>
+
+          <div class="inventory-actions">
+            <button
+              v-if="selectedItem.product.product_type === 'косметический'"
+              class="ghost-button"
+              @click="sendToWardrobe(selectedItem.id)"
+            >
+              В гардероб
+            </button>
+
+            <button
+              v-else
+              class="ghost-button"
+              :disabled="isEggRunning"
+              @click="handlePrimary"
+            >
+              {{ primaryLabel }}
+            </button>
+
+            <button
+              v-if="inventoryStore.userRace === 'nullvour'"
+              @click="inventoryStore.recycleItem"
+              class="ghost-button"
+            >
+              Переработка
+            </button>
+            <button
+              v-else
+              @click="inventoryStore.destroyItem"
+              class="ghost-button"
+            >
+              Выбросить
+            </button>
+
+            <button @click="giftModalOpen = true" class="ghost-button">
+              Подарить
+            </button>
+            <button @click="sendToVault" class="ghost-button">
+              В&nbsp;сейф
+            </button>
+          </div>
+    </div>
+    <!-- ▸ ОСНОВНОЙ БЛОК ИНВЕНТАРЯ -->
+    
+    <div class="inv-wrapper" :style="{ marginTop: wrapperMarginTop }">
+      <h1>Инвентарь</h1>
+      <p class="inventory-count">Всего предметов: {{ inventory.length }}/50</p>
+
+      
+
+        <!-- 🧩 СЕТКА ПРЕДМЕТОВ -->
+        <div v-if="inventory.length" class="inventory-grid">
+          <div
+            v-for="item in inventory"
+            :key="item.id"
+            class="inventory-wrapper"
+          >
+            <!-- ▸ КАРТОЧКА ПРЕДМЕТА -->
+            <div
+              class="inventory-slot"
+              @click="handleItemClick(item)"
+              @mouseenter="(e) => tooltip.show(item.product.description, e)"
+              @mouseleave="tooltip.hide()"
+              :class="{
+                'selected-item': selectedItem && selectedItem.id === item.id,
+                'egg-ready':   item.type === 'creature' && isReadyToHatch(item),
+                'egg-running': item.type === 'creature' && item.incubation && !isReadyToHatch(item)
+              }"
+            >
+              <img
+                :src="`${STATIC_BASE}/static/goods/${item.product.image}`"
+                :alt="item.product.name"
+                @error="onImageError"
+              />
+              <div
+                v-if="item.type === 'creature' && item.incubation && !isReadyToHatch(item)"
+                class="egg-timer-overlay"
+              >
+                {{ formatRemaining(item.incubation.hatch_at) }}
+              </div>
+            </div>
+
+            <!-- ▸ НАДПИСИ ПОД КАРТОЧКОЙ -->
+            <div class="item-caption">
+              <div class="item-name">{{ item.product.name }}</div>
+              <div class="item-rarity" :class="getRarityClass(item.product.rarity)">
+                {{ item.product.rarity }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p v-else>Инвентарь пуст.</p>
+      </div>
+    </div>
+
+    <!-- 🪆 МОДАЛКИ -->
+    <GiftModal
+      v-if="giftModalOpen"
+      :visible="giftModalOpen"
+      :item-id="selectedItem?.id"
+      :item-name="selectedItem?.product.name"
+      @close="giftModalOpen = false"
+    />
+
+    <HatchModal
+      :visible="showHatchModal"
+      :incubation-id="selectedItem?.incubation?.id"
+      @close="showHatchModal = false"
+      @hatched="handleHatched"
+    />
+  </div>
+</template>
+
+
+<style lang="scss">
 /* Убираем лишние стили для body */
 
-$glass-bg: rgba(255, 255, 255, 0.05);
-$glass-border: rgba(255, 255, 255, 0.1);
-$glass-hover: rgba(255, 255, 255, 0.08);
-$accent: #d6dcdda6;
-
-
-body {
-  overflow-y: scroll;
-  height: 100vh;
+.page-inner {
+  position: relative; // ← обязательно
 }
-
-html {
-  scroll-behavior: smooth;
-}
-
-/* Убираем дефолтные стили */
-html, body {
-  margin: 0;
-  padding: 0;
-
-  font-family: 'JetBrains Mono', monospace;
-}
-
 
 /* Блок со всем контентом инвентаря. Ставим масштаб 80%. */
 .inv-wrapper {
-  background:rgba(38, 32, 39, 0.48);
-  overflow-y: auto;
-  border: 1px solid rgb(36, 35, 37);
-  margin: 0 auto;
-  padding: 10px;
-  border-radius: 17px;
-
-
-  transform-origin: top center;
+  background: #181818e7;
+  border: 1px solid rgb(196, 196, 196);
+  max-width: 1300px;
+  padding: 10px 30px 10px;
+  border-radius: 22px;
   text-align: center;
   font-family: 'JetBrains Mono', monospace;
+  display:flexbox;
 
-  /* Скрываем скроллбар, но сохраняем прокрутку */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE и Edge */
-
-  &::-webkit-scrollbar {
-    display: none; /* Chrome, Safari */
-  }
-}
-
-.inventory-page {
-  /* Снимаем лишние отступы, ставим масштаб 80% */
-  margin: 0 auto;
-  padding: 10px;
-  transform: scale(0.8);
-  transform-origin: top center;
-  text-align: center;
-  font-family: 'JetBrains Mono', monospace;
 }
 
 h1 {
+  font-size: 24px;
   background: rgba(0, 0, 0, 0.4);
-  padding: 6px 14px;
-
   border-radius: 12px;
-  display: inline-block;
-
-
   font-family: 'JetBrains Mono', monospace;
 }
 
 .inventory-count {
-    margin-bottom: 10px;
+  font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 40px;
+    font-style: italic;
   }
 
 
@@ -359,146 +365,97 @@ h1 {
 .inventory-grid {
   display: grid;
   font-family: 'JetBrains Mono', monospace;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 1rem;
-  max-width: 1000px;
-  margin: 0 auto;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0rem;
+  max-width: 800px;
+  text-align: center;
 }
 
 /* Карточка предмета */
 .inventory-slot {
-  will-change: transform;
-  position: relative;
-  font-family: 'JetBrains Mono', monospace;
-  display: flex;
-  flex-direction: column;
+  width: 100px; // меньше, стало воздушнее
+  height: 100px; // уменьшаем под чисто иконку
+  padding: 16px;
+  border-radius: 16px;
+  background: transparent;
+  border: 1px solid #969696;
+  display: inline-flex;
   align-items: center;
-  padding: 6px;
-  border: 1px solid #2e2c2c;
-  border-radius: 9px;
-  background:linear-gradient(80deg, #cfcdceb2,rgba(197, 228, 226, 0.664));
-  transition: transform 0.2;
+  position: relative;
+  justify-content: center;
+  
+}
+  .inventory-slot img {
+  max-width: 100%;
+  max-height: 100%;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+
+.item-caption {
+  margin-top: 10px;
   text-align: center;
-  overflow: hidden;
+  margin-bottom: 10px;
 
-  &:hover {
-    transform: scale(1.05);
+  .item-name {
+    font-size: 13px;
+    font-weight: bold;
+    color: #dfdfdf;
   }
 
-  img {
-    width: 110px;
-    height: 110px;
-    object-fit: contain;
-    margin-bottom: 3px;
-    cursor: pointer;
-  }
-
-  p {
+  .item-rarity {
     font-size: 12px;
-    color: #333;
-    margin: 2px 0; 
+    font-style: italic;
   }
 }
 
-/* Название */
-.item-name {
-  margin: 2px 0;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: #333;
-  max-width: 90%;
-  word-break: break-word;
+
+
+.inventory-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 30px; // ← расстояние между панелью и инвентарём
+  width: 100%;
+  justify-content: center; // центрируем весь блок по ширине экрана
+  
 }
 
-/* Редкость */
-.item-rarity {
-  margin: 2px 0;
-  font-size: 12px;
-  line-height: 1.2;
-  font-weight: bold;
-  max-width: 90%;
-  word-break: break-word;
-  background-color: transparent;
-  border: none;
-}
 
-/* Расцветки редкостей */
-.rarity-trash { color: #585858; }
-.rarity-common { color: #406374; }
-.rarity-prize { color: rgb(255, 76, 201); }
-.rarity-special { color: #48e9b3; }
-.rarity-rare { color: #20cf46; }
-.rarity-epic { color: rgb(131, 37, 238); }
-.rarity-legendary { color: rgb(230, 158, 24); }
-.rarity-unique { color: rgb(238, 108, 76); }
-.rarity-elder { color: rgb(143, 36, 17); }
-.rarity-vanished { color: rgb(144, 197, 181); }
-.rarity-glitched { color: rgb(136, 93, 255); }
-.rarity-void { color: rgb(71, 29, 221); }
-
-/* Выделение выбранного */
-.selected-item {
-  outline: 2px solid white;
-  transform: scale(1.03);
-
-}
 
 /* Блок с кнопками */
-.inventory-actions {
-  margin: 20px auto 0;
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  padding: 10px 0;
+/* СТАЦИОНАРНАЯ, НО "ПРИЛИПАЮЩАЯ" ПАНЕЛЬ */
+.inventory-actions-panel {
+  position:fixed;
+  left:350px;
+  top: 150px;
+  background: #181818e7;
+  border: 1px solid rgb(196, 196, 196);
+  padding: 16px 20px;
+  border-radius: 18px;
+  width: 180px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #fff;
+  flex-shrink: 0;
 
-  button {
-    padding: 10px 20px;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    font-family: 'Fira Code', monospace;
-    transition: all 0.2s ease-in-out;
-    width: fit-content;
-    max-width: 140px;
+  .selected-label {
+    font-size: 13px;
+    font-style: italic;
+    margin-bottom: 16px;
+    color: #aaaaaa;
+  }
 
+  .inventory-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    button {
+      width: 100%;
+    }
   }
 }
 
-/* Кнопки */
-.use-button {
-  background-color: #15ce90bd;
-  color: white;
-  &:hover {
-    transform: translateY(-1px);
-
-  }
-}
-
-.destroy-button {
-  background-color: #000000ab;
-  color: white;
-  &:hover {
-    transform: translateY(-1px);
-
-  }
-}
-
-.gift-button {
-  background-color: #cea419bd;
-  color: white;
-  &:hover {
-    transform: translateY(-1px);
-
-  }
-}
-
-/* всегда относительный контекст — для любых оверлеев */
-.inventory-slot {
-  position: relative;          // 🔑 перемещено из .egg-running
-}
 
 /* ───── 1. Визуальная «маска», когда яйцо инкубируется ───── */
 .inventory-slot.egg-running::after,
@@ -515,6 +472,56 @@ h1 {
 /* таймер рисуем поверх маски */
 .egg-timer-overlay {
   z-index: 3;                  // было 2 — увеличили, чтобы оказаться над ::after
+}
+
+.tooltip {
+  max-width: 240px;
+  max-height: 150px;
+  overflow: auto;
+  white-space: normal;
+  word-break: break-word;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: rgba(20, 20, 20, 0.95);
+  color: #e7e7e7;
+  font-size: 18px;
+  font-family: 'JetBrains Mono', monospace;
+  box-shadow: 0 0 6px rgba(0,0,0,0.5);
+  z-index: 9999;
+}
+
+/* Смещение вниз + вправо */
+.tooltip[data-popper-placement^='top'] {
+  margin-bottom: 5px;
+}
+.tooltip[data-popper-placement^='bottom'] {
+  margin-top: 5px;
+}
+.tooltip[data-popper-placement^='left'] {
+  margin-right: 5px;
+}
+.tooltip[data-popper-placement^='right'] {
+  margin-left: 5px;
+}
+
+/* Расцветки редкостей */
+.rarity-trash { color: #585858; }
+.rarity-common { color: #406374; }
+.rarity-prize { color: rgb(255, 76, 201); }
+.rarity-special { color: #48e9b3; }
+.rarity-rare { color: #20cf46; }
+.rarity-epic { color: rgb(131, 37, 238); }
+.rarity-legendary { color: rgb(230, 158, 24); }
+.rarity-unique { color: rgb(238, 108, 76); }
+.rarity-elder { color: rgb(143, 36, 17); }
+.rarity-vanished { color: rgb(144, 197, 181); }
+.rarity-glitched { color: rgba(165, 132, 255, 0.801); }
+.rarity-void { color: rgb(71, 29, 221); }
+
+/* Выделение выбранного */
+.selected-item {
+  outline: 2px solid white;
+  transform: scale(1.03);
 }
 </style>
 

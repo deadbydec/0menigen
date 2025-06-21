@@ -25,7 +25,6 @@ function formatDate(timestamp) {
 
 <template>
   <div class="messages-scroll">
-    <h3>📤 Исходящие</h3>
     
     
     <ul v-if="inboxStore.sentMessages && inboxStore.sentMessages.length">
@@ -40,7 +39,7 @@ function formatDate(timestamp) {
         
       
         <div class="message-header">
-          <strong>Кому: {{ msg.recipient }}</strong>
+          <p><strong>Кому:</strong> {{ msg.recipient }}</p>
           <button @click.stop="deleteMessage(msg.id)" class="delete-button">
             <i class="fa-solid fa-trash"></i>
           </button>
@@ -52,6 +51,7 @@ function formatDate(timestamp) {
           <span class="timestamp">{{ formatDate(msg.timestamp) }}</span>
           
         </div>
+        <hr />
         
         
         <div class="message-body">
@@ -75,16 +75,20 @@ function formatDate(timestamp) {
 <style scoped>
 
 .subject {
-  font-weight: bold;
-  color: #cfcfcf;
+  color: rgba(0, 0, 0, 0.925);
   margin-bottom: 5px;
+  font-size: 14px;
 }
+
+p {
+  margin: 0px;
+  font-size: 14px;}
 
 .message-info {
   margin-top: 0.5rem;
   display: flex;
   justify-content: space-between;
-  font-size: 0.9rem;
+  font-size: 0.7rem;
   color: #666;
 }
 
@@ -100,10 +104,11 @@ ul {
 }
 
 .message-container {
-  color: black;
+  color: rgba(0, 0, 0, 0.925);
   border: 1px solid #ddd;
   background: #ffffffa2;
   border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
   padding: 0.75rem;
   margin-bottom: 0.5rem;
   cursor: pointer;
@@ -123,11 +128,10 @@ ul {
 .message-body {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
-  border-top: 1px dashed #ccc;
 }
 
 .delete-button {
-  position: absolute;
+  position: relative;
   right: 0.5rem;
   top: 50%;
   transform: translateY(-50%);
@@ -138,9 +142,9 @@ ul {
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.2s;
-  padding: 0;         /* убираем лишние отступы */
-  width: 24px;        /* фиксированная ширина */
-  height: 24px;       /* фиксированная высота */
+  padding: 1;         /* убираем лишние отступы */
+  width: 15px;        /* фиксированная ширина */
+  height: 15px;       /* фиксированная высота */
   display: flex;
   align-items: center;
   justify-content: center;

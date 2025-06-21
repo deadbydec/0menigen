@@ -80,13 +80,12 @@ async def remove_from_wardrobe(
     user = Depends(get_current_user_from_cookie),
     db:   AsyncSession = Depends(get_db),
 ):
-    product_id = payload.get("product_id")
-    qty        = payload.get("quantity", 1)
+    wardrobe_id = payload.get("wardrobe_id")
+    if not wardrobe_id:
+        raise HTTPException(400, "`wardrobe_id` обязателен")
 
-    if not product_id:
-        raise HTTPException(400, "`product_id` обязателен")
+    await move_from_wardrobe(db, user, wardrobe_id)
 
-    await move_from_wardrobe(db, user, int(product_id), int(qty))
     return await serialize_wardrobe(db, user.id)
 
 

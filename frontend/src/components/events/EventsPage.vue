@@ -1,7 +1,5 @@
 <template>
   <div class="mall-container">
-    <h1></h1>
-
     <!-- Вертикальный список с прокруткой -->
     <div class="shop-list">
       <!-- Генерация карточек событий -->
@@ -54,19 +52,8 @@ const enterEvent = (route) => {
 
 <style scoped>
 .mall-container {
-  transform: scale(0.9);
   text-align: center;
   padding: 20px;
-  height: 100vh; /* Устанавливаем 100% высоты экрана */
-  overflow-y: scroll; /* Прокрутка по всей высоте экрана */
-}
-
-.mall-container::-webkit-scrollbar {
-  width: 0px;  /* Прячем полосу прокрутки */
-}
-
-.mall-container::-webkit-scrollbar-thumb {
-  background: transparent;  /* Оставляем полосу прокрутки полностью прозрачной */
 }
 
 /* Вертикальный список событий */
@@ -74,30 +61,29 @@ const enterEvent = (route) => {
   display: flex;
   flex-direction: column;   /* Карточки идут в столбик */
   gap: 20px;
-  margin-top: 20px;
+  margin-top: 100px;
   padding-right: 15px;  /* Для прокрутки с правой стороны */
-  padding-bottom: 20px; /* Чтобы нижние карточки не скрывались */
+  padding-bottom: 50px; /* Чтобы нижние карточки не скрывались */
 }
 
 /* Оформление карточек */
 .shop-card {
   width: 100%;
-  border: 1px solid #000;
-  background: #00000093;
+  border: 1px solid rgb(196, 196, 196);
+  background: #181818e7;
   padding: 1.5rem;
-  border-radius: 0.75rem;
+  border-radius: 20px;
   text-align: center;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   text-decoration: none;
   color: #fff;
   height: 290px; /* Зафиксированная высота карточки */
-  max-width: 90%;
+  max-width: 500px;
   margin: 0 auto;
 }
 
 .shop-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
 }
 
 /* Картинка */
@@ -111,16 +97,13 @@ const enterEvent = (route) => {
 
 /* Контейнер под текст */
 .card-content {
-  padding: 0rem 1.5rem 1.8rem;
-  height: calc(100% - 180px); /* Учитываем высоту изображения */
-  box-sizing: border-box;
+  margin-top: 1rem;
 }
 
 .card-title {
-  font-size: 1.75rem;
-  font-weight: 500;
-  margin-bottom: 0.9rem;
-  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
 }
 
 .card-description {

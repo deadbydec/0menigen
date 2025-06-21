@@ -128,6 +128,31 @@ async def like_post(
     except IntegrityError:
         await db.rollback()
         raise HTTPException(status_code=400, detail="Вы уже лайкнули этот пост")
+    
+
+
+@router.delete("/{post_id}/delete")
+async def delete_wall_post(
+    post_id: int,
+    user: User = Depends(get_current_user_from_cookie),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(WallPost).where(WallPost.id == post_id)
+    )
+    post = result.scalar_one_or_none()
+
+    if not post:
+        raise HTTPException(status_code=404, detail="Пост не найден")
+
+    if post.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Можно удалять только свои записи")
+
+    await db.delete(post)
+    await db.commit()
+
+    return {"success": True, "message": "Пост удалён"}
+
 
 
 @router.get("/{post_id}/comments")

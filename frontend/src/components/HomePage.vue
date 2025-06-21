@@ -62,7 +62,6 @@ export default {
     padding-top: 550px; /* Увеличиваем отступ сверху */
     gap: 20px;
     min-height: 100vh; /* Минимальная высота для прокрутки */
-    overflow: hidden;
   }
   
   .hero {
@@ -71,7 +70,6 @@ export default {
     backdrop-filter: blur(7px);
     border-radius: 15px;
     width: 530px;
-    height: 250px;
     background: url('/images/giphy.gif');
     background-repeat: no-repeat;
     background-position: center;
@@ -84,11 +82,6 @@ export default {
     border: 1px solid #2e2c2c;
   }
   
-  
-  html, body {
-    height: 100%; /* Обеспечиваем полную высоту страницы */
-    font-family: 'JetBrains Mono', monospace;
-  }
   
   .gradient-text {
     font-size: 48px;

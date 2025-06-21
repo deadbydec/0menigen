@@ -2,14 +2,15 @@
     <teleport to="body">
       <div class="modal-overlay" @click.self="closeModal">
         <div class="modal">
-          <h2>📨 Письмо от {{ senderUsername }}</h2>
-          <p class="timestamp">📅 {{ formatDate(message.timestamp) }}</p>
+          <button class="close-button" @click="closeModal"><i class="fa-solid fa-xmark"></i></button>
+          
+          <p class="timestamp">{{ formatDate(message.timestamp) }}</p>
+          <p><strong>От:</strong> {{ message.sender }}</p>
+          <p class="subject"><strong>Тема:</strong> {{ message.subject || '-' }}</p>
           <hr />
-          <p class="subject"><strong>Тема:</strong> {{ message.subject || 'Без темы' }}</p>
           <div class="content">
             {{ message.content }}
           </div>
-          <button class="close-button" @click="closeModal">Закрыть</button>
         </div>
       </div>
     </teleport>
@@ -39,7 +40,6 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.6);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -47,13 +47,16 @@
   }
   
   .modal {
-  width: 80vw;       /* займёт 80% от ширины экрана */
-  max-width: 400px;  /* максимум до 800px */
   background: #fff;
   border-radius: 8px;
   padding: 1rem;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  color: #333;
+  width: 400px;
+  max-height: 600px;
+  min-height: 300px;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
 }
+
   
   .subject {
     margin: 1rem 0;
@@ -61,7 +64,7 @@
   
   .timestamp {
     color: #666;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
   }
   
   .content {
@@ -69,12 +72,22 @@
     white-space: pre-wrap;
   }
   
-  .close-button {
-    margin-top: 1rem;
-    background-color: #000000;
-    border: none;
-    padding: 0.4rem 0.8rem;
-    border-radius: 6px;
-    cursor: pointer;
-  }
+.close-button {
+  margin-top: 1rem;
+  background: transparent;
+  position:fixed;
+  border: none;
+  color: #342d38;
+  width: 0px;
+  font-size: 22px;
+  height: 0px;
+  margin-left: 360px;
+  margin-top: 0px;
+  border-radius: 6px;
+  cursor: pointer;
+  :hover {
+  border-radius: 10px;
+  transform: scale(1.2);
+}
+}
   </style>

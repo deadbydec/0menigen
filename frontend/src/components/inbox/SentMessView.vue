@@ -1,15 +1,19 @@
 <template>
   <teleport to="body">
     <div class="modal-overlay" @click.self="closeModal">
+      
       <div class="modal">
-        <h2>📤 Отправлено: {{ formatDate(message.timestamp) }}</h2>
-        <p class="recipient">👤 Кому: {{ recipientUsername }}</p>
+        <button class="close-button" @click="closeModal"><i class="fa-solid fa-xmark"></i></button>
+        <p class="timestamp">{{ formatDate(message.timestamp) }}</p>
+        
+        <p class="recipient"><strong>Кому:</strong> {{ message.recipient }}</p>
+        
+        <p class="subject"><strong>Тема:</strong> {{ message.subject || '-' }}</p>
         <hr />
-        <p class="subject"><strong>Тема:</strong> {{ message.subject || 'Без темы' }}</p>
         <div class="content">
           {{ message.content }}
         </div>
-        <button class="close-button" @click="closeModal">Закрыть</button>
+        
       </div>
     </div>
   </teleport>
@@ -39,22 +43,25 @@ function formatDate(timestamp) {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.6);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 9999; /* Обеспечим, что оверлей выше всего */
 }
 
-.modal {
+  .modal {
   background: #fff;
   border-radius: 8px;
   padding: 1rem;
-  max-width: 500px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  color: #333;
+  width: 400px;
+  max-height: 600px;
+  min-height: 300px;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
 }
 
 .subject {
+  color: #333;
   margin: 1rem 0;
 }
 
@@ -65,14 +72,30 @@ function formatDate(timestamp) {
 .content {
   margin-top: 0.5rem;
   white-space: pre-wrap;
+  color: #333;
 }
 
 .close-button {
   margin-top: 1rem;
-  background-color: #000000;
+  background: transparent;
+  position:fixed;
   border: none;
-  padding: 0.4rem 0.8rem;
+  color: #342d38;
+  width: 0px;
+  font-size: 22px;
+  height: 0px;
+  margin-left: 360px;
+  margin-top: 0px;
   border-radius: 6px;
   cursor: pointer;
+  :hover {
+  border-radius: 10px;
+  transform: scale(1.2);
 }
+}
+
+  .timestamp {
+    color: #666;
+    font-size: 0.8rem;
+  }
 </style>

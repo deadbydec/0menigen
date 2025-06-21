@@ -15,12 +15,12 @@
           <div>
             <label>Внести монет:</label>
             <input type="number" v-model.number="coinsDeposit" min="1" />
-            <button @click="depositCoins">Внести</button>
+            <button @click="depositCoins" class="ghost-button">Внести</button>
           </div>
           <div>
             <label>Вывести монет:</label>
             <input type="number" v-model.number="coinsWithdraw" min="1" />
-            <button @click="withdrawCoins">Вывести</button>
+            <button @click="withdrawCoins" class="ghost-button">Вывод</button>
           </div>
         </div>
       </div>
@@ -57,7 +57,7 @@
                     </span>
                   </button>
                   <!-- Вернуть в инвентарь -->
-                  <button @click="withdrawItem(item)">Убрать в инвентарь</button>
+                  <button @click="withdrawItem(item)"class="ghost-button">В инвентарь</button>
                 </td>
               </tr>
             </tbody>
@@ -100,7 +100,7 @@
                     </span>
                   </button>
                   <!-- Вернуть в инвентарь -->
-                  <button @click="withdrawItem(item)">Убрать в инвентарь</button>
+                  <button @click="withdrawItem(item)"class="ghost-button">В инвентарь</button>
                 </td>
               </tr>
             </tbody>
@@ -286,7 +286,7 @@
     border: 1px solid rgb(0, 0, 0);
     color: #fff;
     padding: 1rem;
-    background-color: rgba(0, 0, 0, 0.4);
+    background:rgba(37, 26, 35, 0.651);
     backdrop-filter: blur(6px);
     border-radius: 8px;
     width: 850px;
@@ -442,6 +442,22 @@
   .star-favorite {
     color: #ffc107; /* Жёлтый */
   }
+
+  .ghost-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+  text-transform: uppercase;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
   </style>
   
   

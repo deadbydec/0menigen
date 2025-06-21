@@ -16,7 +16,7 @@ from .leaderboard import router as leaderboard_router
 from .player import router as player_router
 from .gift import router as gift_router
 from .toilet_doom import router as toilet_doom_router
-from .admin import router as admin_router
+from .adminarnia import router as adminarnia_router
 from .donateshop import router as donateshop_router
 from .landfill import router as landfill_router
 from .playershop import router as playershop_router
@@ -24,8 +24,12 @@ from .safe import router as safe_router
 from .verifyemail import router as verifyemail_router
 from .pets import router as pets_router
 from .wardrobe import router as wardrobe_router
+from .npcquests import router as npcquests_router
+from .clans import router as clans_router
 
 __all__ = [
+    "clans_router",
+    "npcquests_router",
     "wardrobe_router",
     "pets_router",
     "verifyemail_router",
@@ -33,7 +37,7 @@ __all__ = [
     "playershop_router",
     "landfill_router",
     "donateshop_router",
-    "admin_router",
+    "adminarnia_router",
     "toilet_doom_router",
     "gift_router",
     "index_router",

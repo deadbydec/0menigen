@@ -1,11 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import cast, String
 from database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession  # импорт нужного класса
 from sqlalchemy.dialects.postgresql import JSONB
-from models.models import User, Race, GenderEnum, Product, InventoryItem, SystemMessage, SystemMessageType, ProductType
+from models.models import User, Race, GenderEnum, Product, InventoryItem, SystemMessage, SystemMessageType, ProductType, ClanMember, Clan
 from sqlalchemy.future import select  # не забудь импорт!
 from auth.cookie_auth import get_current_user_from_cookie, get_token_from_cookie, decode_access_token
 from utils.last_seen import is_user_online, set_user_online
@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import selectinload
 from utils.random_event_loader import RANDOM_EVENTS
 from random import random, choice
+from typing import Optional
 
 router = APIRouter(prefix="/api/player", tags=["player"])
 
@@ -20,6 +21,13 @@ class IdentityData(BaseModel):
     race: str
     gender: str
     birth_date: str
+
+class RoleSchema(BaseModel):
+    name: str
+    display_name: Optional[str] = None
+
+    class Config:
+        orm_mode = True
 
 @router.get("/")
 async def get_player_info(request: Request, db: Session = Depends(get_db)):
@@ -38,21 +46,39 @@ async def get_player_info(request: Request, db: Session = Depends(get_db)):
 
     return response
 
-
 async def get_player_data(user_id: int, db: AsyncSession) -> dict | None:
     result = await db.execute(
-        select(User).options(selectinload(User.race)).filter_by(id=user_id)
+        select(User)
+        .options(
+            selectinload(User.race),
+            selectinload(User.role),  # ← ЭТО ДОБАВЬ
+            selectinload(User.vip_subscriptions),  # 👈 вот сюда
+            selectinload(User.clan_memberships)
+            .selectinload(ClanMember.clan)
+            .selectinload(Clan.members)
+        )            
+        .filter_by(id=user_id)
     )
     user = result.scalar()
     
     if not user:
         return None
 
+    now = datetime.now(timezone.utc)
+    active_vip = next((
+        sub for sub in user.vip_subscriptions
+        if sub.is_active and (not sub.expires_at or sub.expires_at > now)
+    ), None)
+
     return {
         "id": user.id,
         "name": user.username,
         "usertype": user.user_type.to_russian(),
         "avatar": user.avatar if user.avatar else "/api/profile/avatars/default_avatar.png",
+        "role": {
+            "name": user.role.name if user.role else None,
+            "display_name": user.role.display_name if user.role else None,
+        } if user.role else None,
         "coins": user.coins,
         "race": {
             "id": user.race.id,
@@ -63,6 +89,7 @@ async def get_player_data(user_id: int, db: AsyncSession) -> dict | None:
             "image_url": f"https://localhost:8000/static/races/{user.race.code}.png" if user.race else None,
         } if user.race else None,
         "nullings": user.nullings,
+        "specialk": user.specialk,
         "level": user.level,
         "xp": user.xp,
         "nextLevelXp": user.get_xp_to_next_level(),
@@ -79,29 +106,24 @@ async def get_player_data(user_id: int, db: AsyncSession) -> dict | None:
         "birthdate": user.birthdate.isoformat() if user.birthdate else None,
         "email": user.email,
         "vault_balance": user.vault_balance,
+        "vip_subscription": {
+            "status": active_vip.status.value,
+            "label": active_vip.status.to_russian(),
+            "expires_at": active_vip.expires_at.isoformat() if active_vip.expires_at else None
+        } if active_vip else None,
+        "clans": [
+    {
+        "id": cm.clan.id,
+        "name": cm.clan.name,
+        "avatar_url": cm.clan.avatar_url,
+        "description": cm.clan.description,
+        "level": cm.clan.level,
+        "member_count": len(cm.clan.members)
     }
+    for cm in user.clan_memberships if cm.clan
+]
+ }
 
-@router.get("/public/{user_id}")
-async def get_public_player(user_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar()
-
-    if not user:
-        raise HTTPException(status_code=404, detail="Публичный профиль не найден")
-
-    return {
-        "id": user.id,
-        "name": user.username,
-        "avatar": user.avatar if user.avatar else "/api/profile/avatars/default_avatar.png",
-        "race": user.race,
-        "bio": user.bio,
-        "level": user.level,
-        "coins": user.coins,
-        "status": "online" if is_user_online(user.id) else "offline",
-        "usertype": user.user_type.to_russian(),
-        "gender": user.gender.name if user.gender else "UNKNOWN",
-        "registrationDate": user.registration_date.isoformat() if user.registration_date else None,
-    }
 
 
 @router.get("/races")

@@ -33,13 +33,23 @@ function rejectGift(giftId) {
   inboxStore.rejectGift(giftId)
 }
 
+function acceptFriendRequest(requestId) {
+  inboxStore.acceptFriendRequest(requestId)
+  inboxStore.removeByRelatedId(requestId, 'friend_request')
+}
+
+function rejectFriendRequest(requestId) {
+  inboxStore.rejectFriendRequest(requestId)
+  inboxStore.removeByRelatedId(requestId, 'friend_request')
+}
+
+
 // 💥 Новое:
 
 </script>
 
 <template>
   <div class="messages-scroll">
-    <h3>📥 Входящие</h3>
     <ul v-if="inboxStore.inboxMessages && inboxStore.inboxMessages.length">
       <li 
         v-for="msg in inboxStore.inboxMessages" 
@@ -48,7 +58,7 @@ function rejectGift(giftId) {
         @click="openDetailedMessage(msg)"
       >
         <div class="message-header">
-          <strong>От: {{ msg.sender }}</strong>
+          <p><strong>От:</strong> {{ msg.sender }}</p>
           <button @click.stop="deleteMessage(msg.id)" class="delete-button">
             <i class="fa-solid fa-trash"></i>
           </button>
@@ -58,7 +68,7 @@ function rejectGift(giftId) {
           <span class="subject"><strong>Тема:</strong> {{ msg.subject || '-' }}</span>
           <span class="timestamp">{{ formatDate(msg.timestamp) }}</span>          
         </div>
-
+<hr />
         <div class="message-body">
   {{ msg.content }}
   <div 
@@ -69,6 +79,14 @@ function rejectGift(giftId) {
   <button @click.stop="rejectGift(msg.related_id)">🚫 Отклонить</button>
 </div>
 </div>
+
+  <div 
+    v-if="msg.message_type === 'friend_request'" 
+    class="friend-request-actions"
+  >
+    <button @click.stop="acceptFriendRequest(msg.related_id)">✅ Принять</button>
+    <button @click.stop="rejectFriendRequest(msg.related_id)">❌ Отклонить</button>
+  </div>
 
       </li>
     </ul>
@@ -84,10 +102,32 @@ function rejectGift(giftId) {
 </template>
 
 <style scoped>
+
+.friend-request-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+.friend-request-actions button {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.friend-request-actions button:first-child {
+  background-color: transparent;
+  color: white;
+}
+.friend-request-actions button:last-child {
+  background-color: transparent;
+  color: white;
+}
+
+
 .subject {
-  font-weight: bold;
-  color: #cfcfcf;
+  color: rgba(0, 0, 0, 0.925);
   margin-bottom: 5px;
+  font-size: 14px;
 }
 
 
@@ -95,7 +135,7 @@ function rejectGift(giftId) {
   margin-top: 0.5rem;
   display: flex;
   justify-content: space-between;
-  font-size: 0.9rem;
+  font-size: 0.7rem;
   color: #666;
 }
 
@@ -110,11 +150,16 @@ ul {
   overflow: hidden;
 }
 
+p {
+  margin: 0px;
+  font-size: 14px;}
+
 .message-container {
-  color: black;
+  color: rgba(0, 0, 0, 0.925);
   border: 1px solid #ddd;
   background: #ffffffa2;
   border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
   padding: 0.75rem;
   margin-bottom: 0.5rem;
   cursor: pointer;
@@ -134,7 +179,6 @@ ul {
 .message-body {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
-  border-top: 1px dashed #ccc;
 }
 
 /* Кнопка удаления */
@@ -152,9 +196,9 @@ ul {
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.2s;
-  padding: 0;         /* убираем лишние отступы */
-  width: 24px;        /* фиксированная ширина */
-  height: 24px;       /* фиксированная высота */
+  padding: 1;         /* убираем лишние отступы */
+  width: 15px;        /* фиксированная ширина */
+  height: 15px;       /* фиксированная высота */
   display: flex;
   align-items: center;
   justify-content: center;

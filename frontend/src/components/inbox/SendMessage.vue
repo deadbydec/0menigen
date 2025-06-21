@@ -30,7 +30,7 @@ const send = async () => {
     <input v-model="subject" placeholder="Тема" class="input" />
     
     <div class="message-box-wrapper">
-    <textarea v-model="message" placeholder="Сообщение" class="textarea"></textarea>
+    <textarea v-model="message" placeholder="Текст сообщения..." class="textarea"></textarea>
     
     <button @click="send" class="send-btn">
         <i class="fa-solid fa-envelope"></i>
@@ -70,7 +70,7 @@ const send = async () => {
 
 .textarea {
   width: 100%;
-  height: 120px;
+  height: 100px;
   resize: none;
   padding: 10px 40px 10px 10px; // сдвиг под мини кнопку
   border: 1px solid #999;
@@ -86,9 +86,9 @@ const send = async () => {
   position: absolute;
   bottom: 10px;
   right: 10px;
-  font-size: 18px;
+  font-size: 20px;
   cursor: pointer;
-  color: #555;
+  color: #342d38;
   background: transparent;
   display: flex;
   align-items: center;
@@ -100,7 +100,6 @@ const send = async () => {
 
 /* Hover-эффект: фон меняется, кнопка немного увеличивается */
 .send-btn:hover {
-  background: rgba(85, 85, 85, 0.1);
   transform: scale(1.2);
 }
 </style>

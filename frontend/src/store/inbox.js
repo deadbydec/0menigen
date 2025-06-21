@@ -93,6 +93,29 @@ export const useInboxStore = defineStore("inbox", () => {
     }
   }
 
+  async function acceptFriendRequest(requestId) {
+  try {
+    await api.post("/friends/accept", { request_id: requestId }, { withCredentials: true })
+    await fetchInbox() // если нужно обновить
+  } catch (err) {
+    console.error("❌ Ошибка принятия дружбы:", err)
+  }
+}
+
+async function rejectFriendRequest(requestId) {
+  try {
+    await api.post("/friends/reject", { request_id: requestId }, { withCredentials: true })
+    await fetchInbox()
+  } catch (err) {
+    console.error("❌ Ошибка отклонения дружбы:", err)
+  }
+}
+
+function removeByRelatedId(relatedId, type) {
+  inboxMessages.value = inboxMessages.value.filter(
+    msg => !(msg.related_id === relatedId && msg.message_type === type)
+  )
+}
 
 // В твоем inboxStore или в компоненте
 function clearEmptyMessages() {
@@ -126,5 +149,8 @@ function clearEmptyMessages() {
     openModal,
     closeModal,
     clearEmptyMessages,
+    acceptFriendRequest,
+    rejectFriendRequest,
+    removeByRelatedId
   };
 });

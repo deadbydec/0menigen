@@ -1,4 +1,5 @@
 <template>
+  <div class="page-inner">
   <div class="mypets-wrap">
     <h2 class="title">Тамаглитчи</h2>
     <div class="kennel-grid">
@@ -24,7 +25,7 @@
         </div>
       </template>
     </div>
-  </div>
+  </div></div>
 </template>
 
 <script setup>
@@ -98,20 +99,19 @@ onMounted(() => {
   opacity: 0.8;
 }
 .mypets-wrap {
-  border: 1px solid rgba(0, 0, 0, 0.384);
+  border: 1px solid rgb(196, 196, 196);
   padding: 1rem 1.5rem;
-  background-color: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(6px);
-  border-radius: 12px;
-  width: fit-content;
-  margin: 0 auto;
+  background: #181818e7;
+  border-radius: 18px;
+  width: 900px;
+  height: 650px;
+  margin: 60px auto;
   color: #fff;
-  font-family: 'Fira Code', monospace;
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
 }
 
 .title {
-  font-size: 20px;
+  font-size: 30px;
   text-align: center;
   margin-bottom: 1rem;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
@@ -119,17 +119,17 @@ onMounted(() => {
 
 .kennel-grid {
   display: grid;
-  grid-template-columns: repeat(3, 160px);
-  grid-template-rows: repeat(2, 160px);
-  gap: 20px;
+  grid-template-columns: repeat(3, 260px);
+  grid-template-rows: repeat(3, 260px);
+  gap: 30px;
   justify-content: center;
 }
 
 .kennel-slot {
   position: relative;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:transparent;
+  border: 1px solid rgb(196, 196, 196);
   border-radius: 10px;
   text-align: center;
   cursor: default;
@@ -140,10 +140,6 @@ onMounted(() => {
   cursor: pointer;
 }
 
-.kennel-slot.filled:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
-}
 
 .kennel-slot img {
   width: 100%;

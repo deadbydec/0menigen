@@ -1,9 +1,14 @@
 <template>
-  <div class="wall">
+  <div class="wall-block">
     <div class="wall-header">
-      <h2><i class="fa-solid fa-bars-staggered" /> Стена записей</h2>
-      <button @click="fetchWallPosts"><i class="fa-solid fa-rotate" /></button>
-    </div>
+  <div class="wall-title">
+    <h2 class="section-title"> Стена записей</h2>
+  </div>
+
+
+</div>
+
+
 
     <div class="wall-content">
       <ul class="wall-posts">
@@ -25,11 +30,17 @@
           <div class="meta">
             <time>{{ formatDate(post.created_at) }}</time>
             <div class="actions">
-              <button @click="toggleLike(post)" :class="{ liked: post.liked_by_me }">
-                ❤ {{ post.likes }}
-              </button>
-              <button @click="toggleComments(post)">💬 {{ post.comments?.length ?? 0 }}</button>
-            </div>
+  <button @click="toggleLike(post)" :class="{ liked: post.liked_by_me }">
+    ❤ {{ post.likes }}
+  </button>
+  <button @click="toggleComments(post)">💬 {{ post.comments?.length ?? 0 }}</button>
+  <button
+    v-if="post.author?.id === profileStore.profile?.id"
+    @click="handleDelete(post)"
+    title="Удалить пост"
+  >❌</button>
+</div>
+
           </div>
 
           <div v-if="post.showComments" class="wall-comments">
@@ -71,6 +82,7 @@ const {
 
   fetchWallPosts,
   addWallPost,
+  deleteWallPost, // 👈 вот это
   toggleLike,
   fetchComments,
   addCommentToPost
@@ -85,6 +97,13 @@ async function addPost () {
   toast.addToast('📌 Запись добавлена!', { type: 'success' })
   newPost.value = ''
 }
+
+async function handleDelete(post) {
+  if (!confirm('Удалить эту запись?')) return
+  await deleteWallPost(post.id)
+  toast.addToast('🗑 Запись удалена', { type: 'success' })
+}
+
 
 async function toggleComments (post) {
   post.showComments = !post.showComments
@@ -117,6 +136,23 @@ watchEffect(() => {
 
 <style scoped lang="scss">
 
+.wall-block {
+  max-width: 700px;
+  height: 360px;
+  background: rgba(38, 32, 39, 0.48);
+  border: 1px solid #2e2c2c;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  color: white;
+}
+
+
 .author-link {
   color: #aaa;
   font-weight: 500;
@@ -127,41 +163,50 @@ watchEffect(() => {
 }
 
 
-.wall {
-  display: flex;
-  max-width: 600px;
-  flex-direction: column;
-  backdrop-filter: blur(7px);
-  background:rgba(38, 32, 39, 0.48);
-  border: 1px solid #2e2c2c;
-  border-radius: 8px;
-  padding: 10px;
-  width: 600px;
-  font-size: 13px;
-  gap: 10px;
-}
+
 
 .wall-header {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
+  gap: 6px;
 
-  h3 {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
+  .wall-title {
+    width: 100%;
+    text-align: center;
   }
 
-  button {
-    display: flex;
-    max-width: 60px;
+  .refresh-btn {
+    align-self: flex-end;
     background: none;
     border: none;
     color: inherit;
     cursor: pointer;
+    font-size: 14px;
   }
 }
+
+.section-title {
+  position: relative;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  text-align: left;
+  margin: 0;
+
+  &::after {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 1px;
+    background-color: white;
+    opacity: 0.3;
+    margin: 6px auto 0;
+    border-radius: 1px;
+  }
+}
+
+
 
 .wall-content {
   max-height: 220px;

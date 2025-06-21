@@ -1,22 +1,23 @@
 <script setup>
 import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
+import { usePlayerStore } from "@/store/player";
 import api from "@/utils/axios";
 
-const router = useRouter()
+const router = useRouter();
+const playerStore = usePlayerStore();
 
 const players = ref([]);
 const searchQuery = ref("");
-const filter = ref("all"); // "all" или "online"
+const filter = ref("all");
 const loading = ref(false);
 
+// 🔄 Загрузка списка игроков
 async function fetchPlayers() {
   loading.value = true;
   try {
-    console.log("🔄 Запрос списка игроков...");
     const response = await api.get(`/players/?filter=${filter.value}&search=${searchQuery.value}`);
     players.value = response.data;
-    console.log("✅ Полученные игроки:", players.value);
   } catch (error) {
     console.error("❌ Ошибка загрузки списка игроков:", error);
   } finally {
@@ -24,8 +25,15 @@ async function fetchPlayers() {
   }
 }
 
-onMounted(fetchPlayers);
+// ⏳ Загружаем текущего игрока, если ещё не загружен
+onMounted(async () => {
+  if (!playerStore.player) {
+    await playerStore.fetchPlayer();
+  }
+  await fetchPlayers();
+});
 
+// 📦 Получаем ссылку на аватар
 function getAvatarUrl(avatarPath) {
   if (!avatarPath) {
     return "https://localhost:5002/api/profile/avatars/default_avatar.png";
@@ -33,12 +41,19 @@ function getAvatarUrl(avatarPath) {
   return `https://localhost:5002${avatarPath}?t=${Date.now()}`;
 }
 
+// 🔁 Переход в профиль
 function goToProfile(playerId) {
-  router.push(`/profile/${playerId}`);
+  if (playerStore.player?.id === playerId) {
+    router.push("/profile");
+  } else {
+    router.push(`/profile/${playerId}`);
+  }
 }
 
+// 🔍 Автопоиск
 watch([searchQuery, filter], fetchPlayers);
 </script>
+
 
 <template>
   <div class="players-container">

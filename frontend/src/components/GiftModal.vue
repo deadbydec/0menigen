@@ -49,7 +49,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(1px); /* Немного блюра для футуристичного эффекта */
     z-index: 1000;
     animation: fadeInBg 0.3s ease forwards;
   }
@@ -59,7 +58,7 @@
   /* Контент самой модалки */
   .gift-modal-content {
     position: relative;
-    background: rgba(24, 24, 24, 0.88);
+    background: rgb(24, 24, 24);
     border-radius: 12px;
     padding: 20px 24px;
     min-width: 300px;
@@ -94,7 +93,7 @@
   
   /* Кнопка "Отправить" */
   .use-button {
-    background: linear-gradient(135deg, #22cc88, #075e41bd);
+    background: linear-gradient(135deg, #22ccb0, #034b3bbd);
     color: #fff;
     border: none;
     max-width: 150px;
@@ -110,13 +109,13 @@
   }
   
   .use-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0, 255, 150, 0.4);
+    transition: transform 0.2;
+
   }
   
   .destroy-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(255, 0, 0, 0.3);
+    transition: transform 0.2;
+
   }
   
   /* Кнопка закрытия (иконка в углу, если захочешь) */

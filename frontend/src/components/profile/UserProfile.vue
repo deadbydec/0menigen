@@ -1,37 +1,31 @@
 <template>
+  <div class="profile-wrapper">
+    <div class="profile-container">
+      <!-- ✅ Левая колонка -->
+      <div class="left-column">
+        <AvatarBlock />
+        <AchievementsBlock />
+      </div>
 
-  <div class="profile-container">
-    <!-- ✅ Левая колонка -->
-    <div class="left-column">
-      <AvatarBlock />
-      <AchievementsBlock />
-      
-      
+      <!-- ✅ Центральная гигастенка -->
+      <div class="center-column">
+        <BioBlock />
+        <WallBlock />
+        <PetsBlock />
+      </div>
+
+      <!-- ✅ Правая колонка -->
+      <div class="right-column">
+        <FriendsBlock />
+        <CollectBlock />
+      </div>
     </div>
-
-    <div class="center-column">
-    <!-- ✅ Центральная гигастенка -->
-    <BioBlock />
-    <WallBlock />
-    <PetsBlock />
   </div>
-    
-
-    <!-- ✅ Правая колонка (Друзья + Ачивки) -->
-    <div class="right-column">
-      <CollectBlock/>
-      <FriendsBlock />
-      
-    </div>
-
-    <!--<div class="last-column">-->
-      
-
-    </div>
-
 </template>
 
+
 <script setup>
+
 import AvatarBlock from "@/components/profile/AvatarBlock.vue";
 import BioBlock from "@/components/profile/BioBlock.vue";
 import WallBlock from "@/components/profile/WallBlock.vue";
@@ -43,14 +37,24 @@ import PetsBlock from "@/components/profile/PetsBlock.vue";
 </script>
 
 <style scoped>
-.profile-container {
-  zoom: 95%;
-  display: grid;
-  grid-template-columns: 2fr 4fr 2fr;
-  grid-template-rows: auto;
-  gap: 10px;
-  padding: 20px;
+.profile-wrapper {
+  display:flex;
+  justify-content: center;
+  width: 100%;
+  padding-top:120px;
+  box-sizing: border-box;
+
 }
+
+.profile-container {
+  width: auto;
+  max-width: 1300px; /* 💥 Твоя желаемая ширина */
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 10px;
+  background: rgba(255, 0, 0, 0.1);
+}
+
 
 /* Левая колонка */
 .left-column {
@@ -77,13 +81,14 @@ import PetsBlock from "@/components/profile/PetsBlock.vue";
 
 
 /* Блоки */
-.avatar-block, .bio-block, .wall-block, .friends-block, .achievements-block, .actives-block, .collect-block, .libra-block, .pets-block {
-  background:rgba(38, 32, 39, 0.48);
+.avatar-block, .bio-block, .wall-block, .friends-block, .achievements-block, .collect-block, .pets-block {
+  background: #181818e7;
   padding: 16px;
-  border-radius: 10px;
+  border-radius: 18px;
+  border: 1px solid rgb(196, 196, 196);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   font-family: 'JetBrains Mono', monospace;
-  backdrop-filter: blur(7px);
+  backdrop-filter: blur(1px);
 }
 </style>
 

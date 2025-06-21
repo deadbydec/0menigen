@@ -1,11 +1,20 @@
 import redis.asyncio as redis
 from fastapi import APIRouter, Query, HTTPException, status, Depends
-from fastapi.responses import JSONResponse
 from typing import List, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from models.models import User
 from database import get_db
+from fastapi import Depends, Request, status
+from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from models.models import User, SystemMessage, SystemMessageType
+from database import get_db
+from auth.cookie_auth import get_token_from_cookie, decode_access_token
+from jose import JWTError
+from sqlalchemy.orm import selectinload
+from utils.last_seen import is_user_online
 
 router = APIRouter()
 
@@ -46,3 +55,36 @@ async def get_players(
         result = [p for p in result if p["status"] == "online"]
 
     return JSONResponse(content=result, status_code=status.HTTP_200_OK)
+
+
+@router.get("/public/{user_id}")
+async def get_public_player(user_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(User).options(selectinload(User.race)).where(User.id == user_id)
+    )
+    user = result.scalar()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Публичный профиль не найден")
+
+
+    return {
+        "id": user.id,
+        "username": user.username,
+        "avatar": user.avatar or "/api/profile/avatars/default_avatar.png",
+        "race": {
+            "id": user.race.id,
+            "code": user.race.code,
+            "display_name": user.race.display_name
+        } if user.race else None,
+        "bio": user.bio or "",
+        "level": user.level,
+        "coins": user.coins,
+        "status": "online" if is_user_online(user.id) else "offline",
+        "usertype": user.user_type.to_russian(),
+        "gender": user.gender.name if user.gender else "UNKNOWN",
+        "gender_label": user.gender.to_russian() if user.gender else "неизвестный",
+        "registrationDate": user.registration_date.isoformat() if user.registration_date else None,
+    }
+
+

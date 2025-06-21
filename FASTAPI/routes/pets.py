@@ -8,7 +8,7 @@ from utils.wardrobe_tools import build_avatar_layers
 import logging
 
 from database import get_db
-from models.models import Pet, PetAppearance, PetRenderConfig
+from models.models import Pet, PetAppearance, PetRenderConfig, Product, UserPetWardrobeItem, InventoryItem, VaultItem
 from auth.cookie_auth import get_current_user_from_cookie
 from utils.slot_utils import get_enum_slot
 
@@ -41,13 +41,30 @@ async def get_my_pets(user=Depends(get_current_user_from_cookie), db: AsyncSessi
     return out
 
 
+@router.get("/public/{user_id}", summary="Питомцы другого пользователя")
+async def get_public_pets(user_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Pet).where(Pet.user_id == user_id).order_by(Pet.created_at)
+    )
+    pets = result.scalars().all()
+
+    out = []
+    for p in pets:
+        pet_dict = await pet_to_dict(p, db)  # 💥 await обязательно
+        out.append(pet_dict)
+
+    return out
+
+
 
 @router.get("/{pet_id}", summary="Информация о питомце")
 async def get_pet(pet_id: int, user=Depends(get_current_user_from_cookie), db: AsyncSession = Depends(get_db)):
     pet: Pet | None = await db.get(Pet, pet_id)
     if not pet or pet.user_id != user.id:
         raise HTTPException(404, "Питомец не найден")
-    return pet_to_dict(pet)
+
+    return await pet_to_dict(pet, db)  # ✅✅✅ вот это и надо!
+
 
 @router.get("/{pet_id}/appearance")
 async def get_appearance(pet_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_from_cookie)):
@@ -146,6 +163,7 @@ async def save_appearance(
 
 
 async def pet_to_dict(pet: Pet, db: AsyncSession) -> dict:
+    
     return {
         "id": pet.id,
         "name": pet.name,
@@ -163,5 +181,157 @@ async def pet_to_dict(pet: Pet, db: AsyncSession) -> dict:
         "birthdate": pet.birthdate.isoformat() if pet.birthdate else None,
         "created_at": pet.created_at.isoformat() if pet.created_at else None,
         "last_update": pet.last_update.isoformat() if pet.last_update else None,
-        "avatar_layers": build_avatar_layers(pet.id, db),  # ← ВОТ ЭТО ДОЛЖНО БЫТЬ
+        "avatar_layers": await build_avatar_layers(pet.id, db, avatar_mode=True, race_code=pet.race_code),
+        # ✅ Новое
+        "biography": pet.biography,
+        "favorite_items": pet.favorite_items or [],
+        "companion": {
+            "product_id": pet.companion_id,
+            "name": pet.companion_name,
+            "image": pet.companion_image,
+            "description": pet.companion_description,
+        } if pet.companion_id else None
+
     }
+
+class BioEdit(BaseModel):
+    biography: str
+
+class CompanionAttach(BaseModel):
+    product_id: int
+    name: str = ""
+    description: str = ""
+
+class FavoriteItemsPayload(BaseModel):
+    item_ids: list[int] = Field(default_factory=list)  # ID продуктов
+
+@router.post("/{pet_id}/bio", summary="Изменить био питомца")
+async def update_biography(pet_id: int, payload: BioEdit, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_from_cookie)):
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден")
+
+    pet.biography = payload.biography[:2000]  # 🔒 Защита от оверфлоу
+    await db.commit()
+    return {"success": True}
+
+
+@router.post("/{pet_id}/companion", summary="Приручить спутника питомцем")
+async def tame_companion(pet_id: int, payload: CompanionAttach, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_from_cookie)):
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден")
+
+    product = await db.get(Product, payload.product_id)
+    if not product:
+        raise HTTPException(404, "Предмет не найден")
+
+    if "companion" not in (product.types or []):
+        raise HTTPException(400, "Этот предмет нельзя приручить как спутника")
+
+    # 🧠 Проверяем, есть ли в инвентаре такой предмет
+    item_to_delete = await db.scalar(
+        select(InventoryItem)
+        .where(
+            InventoryItem.user_id == user.id,
+            InventoryItem.product_id == product.id
+        )
+        .limit(1)
+    )
+
+    if not item_to_delete:
+        raise HTTPException(400, "У тебя нет этого предмета")
+
+    # ✅ Приручаем спутника
+    pet.companion_id = product.id
+    pet.companion_name = product.name
+    pet.companion_description = product.description or ""
+    pet.companion_image = product.image
+
+    await db.delete(item_to_delete)
+    await db.commit()
+
+    return {"success": True}
+
+
+
+
+class CompanionEdit(BaseModel):
+    name: str = ""
+    description: str = ""
+
+@router.post("/{pet_id}/companion/edit", summary="Редактировать имя и описание спутника")
+async def edit_companion(pet_id: int, payload: CompanionEdit, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_from_cookie)):
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден")
+    if not pet.companion_id:
+        raise HTTPException(400, "У питомца нет спутника")
+
+    pet.companion_name = payload.name[:100]
+    pet.companion_description = payload.description[:2000]
+
+    await db.commit()
+    return {"success": True}
+
+
+
+@router.post("/{pet_id}/favorite-items", summary="Добавить любимые предметы питомцу")
+async def set_favorite_items(pet_id: int, payload: FavoriteItemsPayload, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_from_cookie)):
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден")
+
+    # Собираем все доступные игроку product_id из инвентаря, сейфа и гардероба
+    result = await db.execute(
+        select(Product.id)
+        .join(InventoryItem, InventoryItem.product_id == Product.id, isouter=True)
+        .join(VaultItem, VaultItem.product_id == Product.id, isouter=True)
+        .join(UserPetWardrobeItem, UserPetWardrobeItem.product_id == Product.id, isouter=True)
+        .where(
+            (InventoryItem.user_id == user.id) |
+            (VaultItem.user_id == user.id) |
+            (UserPetWardrobeItem.user_id == user.id)
+        )
+    )
+    allowed_ids = {row[0] for row in result.fetchall() if row[0] is not None}
+
+    # Оставляем только те ID, которые реально есть у игрока
+    filtered = [i for i in payload.item_ids if i in allowed_ids]
+
+    pet.favorite_items = filtered[:20]  # 🔒 максимум 20 любимок
+    await db.commit()
+    return {"success": True, "count": len(filtered)}
+
+
+@router.post("/{pet_id}/companion/remove", summary="Убрать спутника у питомца")
+async def remove_companion(
+    pet_id: int,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user_from_cookie)
+):
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден")
+
+    # Сохраняем ссылку на старого компаньона до удаления
+    old_companion_id = pet.companion_id
+
+    # Очищаем компаньона у питомца
+    pet.companion_id = None
+    pet.companion_name = ""
+    pet.companion_description = ""
+
+    # Если был спутник — вернуть в инвентарь
+    if old_companion_id:
+        item = InventoryItem(
+            user_id=user.id,
+            product_id=old_companion_id,
+            quantity=1
+        )
+        db.add(item)
+
+    await db.commit()
+    return {"success": True}
+
+

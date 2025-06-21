@@ -50,3 +50,23 @@ border: 1px solidrgb(36, 35, 37);
   transform: scale(0.8);
 
   border: 1px solid rgb(36, 35, 37); - основа
+
+  футер и хедер
+  background:linear-gradient(90deg, #181818, #449992, #181818 );
+
+  кнопки
+  background:linear-gradient(30deg, #181818, #449992);
+  border-radius: 11px;
+
+
+  блоки
+  background: #181818e7;
+  
+  border: 1px solid rgb(196, 196, 196);
+  backdrop-filter: blur(1px);
+  border-radius: 18px;
+
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+
+  background:linear-gradient(50deg, rgb(24, 24, 24), rgb(2, 85, 81),rgb(5, 235, 196));
+

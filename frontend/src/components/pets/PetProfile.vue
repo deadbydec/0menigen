@@ -20,11 +20,59 @@
         Гардероб
       </button>
     </section>
-    <section class="glass-card below-avatar">
+ <section class="glass-card below-avatar" v-if="!isLoading && pet?.companion !== undefined">
   <h3 class="card-title">Компаньон</h3>
-  <p>Здесь будет инфа о прирученном спутнике 
-    этого питомца.</p>
+
+  <div v-if="pet?.companion" class="companion-layout">
+    <img :src="companionIcon" alt="icon" class="companion-image" />
+
+    <div class="companion-info">
+      <!-- 🎭 ИМЯ -->
+      <h4 class="companion-name" v-if="!editingCompanion">{{ pet.companion.name }}</h4>
+      <input
+        v-else
+        v-model="companionName"
+        class="companion-name-input"
+        maxlength="100"
+        placeholder="Имя спутника"
+      />
+
+      <!-- 📝 ОПИСАНИЕ -->
+      <p class="companion-description" v-if="!editingCompanion">{{ pet.companion.description }}</p>
+      <textarea
+        v-else
+        v-model="companionDesc"
+        class="companion-description-input"
+        rows="3"
+        maxlength="2000"
+        placeholder="Описание спутника"
+      />
+
+      <!-- 🔘 КНОПКИ -->
+      <div class="companion-actions">
+        <button v-if="!editingCompanion" @click="startEditCompanion">✏️ Редактировать</button>
+        <button v-if="editingCompanion" @click="saveCompanionInfo">💾 Сохранить</button>
+        <button v-if="editingCompanion" @click="editingCompanion = false">❌ Отмена</button>
+
+        <button v-if="pet.companion?.product_id && !editingCompanion" @click="removeCompanion">🚫 Убрать</button>
+      </div>
+    </div>
+  </div>
+
+  <div v-else>
+    <p>Нет спутника</p>
+    <button @click="showPicker = true">🐾 Приручить</button>
+  </div>
 </section>
+
+
+<CompanionModal
+  :visible="showPicker"
+  :pet-id="pet?.id"
+  @close="showPicker = false"
+  @updated="refreshPet"
+/>
+
 
     <!-- ╭─ Stats ───────────────────────────────────────────╮ -->
     <section class="glass-card stats-card" v-if="!isLoading && pet">
@@ -44,18 +92,33 @@
 
     <!-- ╭─ Bio ─────────────────────────────────────────────╮ -->
     <section class="glass-card bio-card" v-if="!isLoading && pet">
-      <h3 class="card-title">Биография</h3>
-      <p class="bio-text" v-if="pet.bio?.trim().length">
-        {{ pet.bio }}
-      </p>
-      <p class="bio-placeholder" v-else>
-        Расскажите о&nbsp;питомце… 📝
-      </p>
-    </section>
-    <section class="glass-card below-bio">
-  <h3 class="card-title">Реликвии</h3>
-  <p>Здесь можно отобразить значимые предметы для этого питомца</p>
+  <h3 class="card-title">Биография</h3>
+
+  <div v-if="editingBio">
+    <textarea v-model="newBio" class="bio-textarea" rows="5" />
+    <button @click="saveBio">💾 Сохранить</button>
+    <button @click="editingBio = false">❌ Отмена</button>
+  </div>
+
+  <div v-else @click="() => { newBio = pet.bio || ''; editingBio = true }">
+    <p v-if="pet.bio?.trim().length">{{ pet.bio }}</p>
+    <p v-else class="bio-placeholder">Расскажите о&nbsp;питомце… 📝</p>
+  </div>
 </section>
+
+    <section class="glass-card below-bio" v-if="!isLoading && pet?.favorite_items?.length">
+  <h3 class="card-title">Реликвии</h3>
+  <div class="favorite-items">
+    <img
+      v-for="pid in pet.favorite_items"
+      :key="pid"
+      :src="(wardrobeStore.byPid(pid) || inventoryStore.byPid(pid))?.image || ''"
+      class="favorite-icon"
+      :alt="'item ' + pid"
+    />
+  </div>
+</section>
+
 
     <!-- loader / fallback -->
     <div v-if="isLoading" class="loader">Загрузка питомца…</div>
@@ -72,63 +135,117 @@ import dayjs from 'dayjs'
 import { usePetsStore } from '@/store/pets'
 import { usePetRenderStore } from '@/store/petRender'
 import { useWardrobeStore } from '@/store/wardrobe'
+import { useInventoryStore } from '@/store/inventory'
+import CompanionModal from './CompanionModal.vue'
+const showPicker = ref(false)
 
 const route         = useRoute()
 const router        = useRouter()
 const petsStore     = usePetsStore()
 const renderStore   = usePetRenderStore()
 const wardrobeStore = useWardrobeStore()
+const inventoryStore = useInventoryStore()
 
-
-const isLoading = ref(true)
 const petId = Number(route.params.id)
-const pet = computed(() => petsStore.myPets.find(p => p.id === petId))
+const isLoading = ref(true)
 
 const layers = ref([])
+const pet = computed(() => petsStore.currentPet) // ✅ теперь всегда используем только currentPet
 
+const newBio = ref('')
+const editingBio = ref(false)
+const editingCompanion = ref(false)
+const companionName = ref('')
+const companionDesc = ref('')
 
-onMounted(async () => {
-  const petId = Number(route.params.id)
-
-  await petsStore.fetchPetById(petId)
-  const realPetId = petsStore.currentPet?.id
-  if (realPetId) {
-    await renderStore.fetchAppearance(realPetId, true)
-  }
-
-  await wardrobeStore.fetchWardrobe()
-
-  if (pet.value?.id) {
-    layers.value = buildLayersCustom(
-      pet.value,
-      renderStore.appearances[pet.value.id] || [],
-      renderStore.getSlotOrderFor(pet.value.id),
-      layer => {
-        return layer.rid != null
-          ? wardrobeStore.byRid(layer.rid)
-          : wardrobeStore.byPid(layer.pid)
-      }
-    )
-  }
-
-  isLoading.value = false
-})
+const getItemIcon = (filename) =>
+  `${import.meta.env.VITE_STATIC_URL || 'https://localhost:5002'}/static/goods/${filename}`
 
 onMounted(async () => {
-  // 1. если питомцы ещё не загружены, грузим всех
+  isLoading.value = true
+
+  // если питомцы ещё не загружены, грузим всех
   if (!petsStore.myPets.length) {
     await petsStore.fetchAllPets()
   }
 
-  // 2. загружаем внешний вид (appearance) и гардероб
+  // грузим конкретного питомца
+  await petsStore.fetchPetById(petId)
+
+  // appearance + wardrobe + inventory
   await Promise.all([
     renderStore.fetchAppearance(petId, true),
-    wardrobeStore.fetchWardrobe()
+    wardrobeStore.fetchWardrobe(),
+    inventoryStore.fetchInventory(),
   ])
+
+const p = pet.value
+if (p?.id) {
+  layers.value = renderStore.getLayersForPet(p.id)
+  newBio.value = p.biography || ''
+  
+  if (p.companion && typeof p.companion === 'object') {
+    companionName.value = p.companion.name || ''
+    companionDesc.value = p.companion.description || ''
+  } else {
+    companionName.value = ''
+    companionDesc.value = ''
+  }
+}
+
 
   isLoading.value = false
 })
 
+function startEditCompanion() {
+  if (!pet.value?.companion) return
+
+  companionName.value = pet.value.companion.name || ''
+  companionDesc.value = pet.value.companion.description || ''
+  editingCompanion.value = true
+}
+
+const cancelEditCompanion = () => {
+  editingCompanion.value = false
+}
+
+const cancelEditBio = () => {
+  editingBio.value = false
+}
+
+
+
+const companionIcon = computed(() => {
+  const companion = pet.value?.companion
+  if (!companion || !companion.image) return ''
+  return getItemIcon(companion.image)
+})
+
+
+async function refreshPet() {
+  if (!pet.value?.id) return
+  await petsStore.fetchPetById(pet.value.id)
+}
+
+async function removeCompanion() {
+  if (!pet.value) return
+  await petsStore.removeCompanion(pet.value.id)
+}
+
+
+async function saveBio() {
+  if (!pet.value) return
+  await petsStore.updatePetBio(pet.value.id, newBio.value)
+  await petsStore.fetchPetById(pet.value.id)
+  editingBio.value = false
+}
+
+async function saveCompanionInfo() {
+  if (!pet.value) return
+  await petsStore.editCompanion(pet.value.id, companionName.value, companionDesc.value)
+  await petsStore.fetchPetById(pet.value.id)
+  editingCompanion.value = false
+}
 
 function formatDate(iso) {
   return iso ? dayjs(iso).format('DD.MM.YYYY HH:mm') : '—'
@@ -140,6 +257,10 @@ function openWardrobe() {
   }
 }
 
+function openCompanionPicker() {
+  console.warn("openCompanionPicker ещё не реализован")
+  // тут будет логика выбора спутника
+}
 
 
 watchEffect(() => {
@@ -152,7 +273,135 @@ watchEffect(() => {
 
 
 
+
+
 <style scoped>
+
+.companion-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  margin-top: 16px;
+}
+
+.companion-image {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.companion-info {
+  flex: 1;
+}
+
+.companion-name {
+  font-size: 1.4em;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.companion-description {
+  font-size: 1em;
+  margin-bottom: 12px;
+  white-space: pre-line;
+}
+
+.companion-name-input,
+.companion-description-input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 6px 8px;
+  color: white;
+  width: 100%;
+  border-radius: 6px;
+  font-size: 1em;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.companion-name-input {
+  font-weight: bold;
+  font-size: 1.2em;
+  margin-bottom: 6px;
+}
+
+.companion-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+
+.companion-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  margin-top: 16px;
+}
+
+.companion-image {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.companion-info {
+  flex: 1;
+}
+
+.companion-name {
+  font-size: 1.4em;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.companion-description {
+  font-size: 1em;
+  margin-bottom: 12px;
+}
+
+.companion-actions {
+  display: flex;
+  gap: 10px;
+}
+
+
+.companion-icon,
+.favorite-icon {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  margin: 4px;
+}
+
+button {
+  background: transparent;
+  color: #ccc;
+
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out, color 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    border-color: #666;
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(0.98);
+  }
+}
+
+
+
 /* ── Grid layout ───────────────────────────────────── */
 .pet-grid {
   display: grid;

@@ -1,4 +1,3 @@
 from database import Base
 
-from .models import TokenBlocklist, News, User, Product, ForumThread, Pet
-
+from .models import TokenBlocklist, News, User, Product, ForumThread, Pet, VipSubscription, Role, Clan

@@ -1,6 +1,6 @@
 <template>
   <div class="bio-block">
-    <h2>Биография</h2>
+    <h2>Досье</h2>
 
     <div v-if="isEditing">
       <textarea
@@ -38,7 +38,9 @@ import { ref, watch } from "vue";
 import { useProfileStore } from "@/store/profile";
 
 const profileStore = useProfileStore();
-const profile = profileStore.profile;
+import { computed } from 'vue'
+const profile = computed(() => profileStore.profile)
+
 
 const isEditing = ref(false);
 const editableBio = ref("");
@@ -57,19 +59,25 @@ const startEditing = () => {
 };
 
 const saveBio = async () => {
-  if (editableBio.value.trim() !== profile?.bio) {
-    await profileStore.updateBio(editableBio.value);
-    profile.bio = editableBio.value; // 💥 сразу меняем на клиенте
+  if (!profile) {
+    console.warn('⛔ Профиль ещё не загружен');
+    return;
   }
+
+  if (editableBio.value.trim() !== profile.bio) {
+    await profileStore.updateBio(editableBio.value);
+    profile.bio = editableBio.value; // ✅ теперь безопасно
+  }
+
   isEditing.value = false;
 };
+
 
 </script>
 
 <style scoped>
 .bio-block {
-  display: flex;
-  max-width: 588px;
+  max-width: 600px;
   flex-direction: column;
   backdrop-filter: blur(7px);
   background:rgba(38, 32, 39, 0.48);
@@ -106,6 +114,24 @@ textarea {
   
 }
 
+.bio-block h2 {
+  position: relative;
+  font-size: 18px;
+  text-align: left;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.bio-block h2::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 1px;
+  background-color: white;
+  opacity: 0.4; /* 👈 мягкий, неяркий акцент */
+  margin: 6px auto 0;
+  border-radius: 1px;
+}
 
 </style>
   

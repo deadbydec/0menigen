@@ -10,21 +10,21 @@ const mouseX = ref(0)
 const mouseY = ref(0)
 const playerStore = usePlayerStore();
 
-const parallaxStyle = computed(() => {
-  const maxShift = 30 // максимум смещения в px
-  const x = ((mouseX.value - window.innerWidth / 2) / window.innerWidth) * maxShift
-  const y = ((mouseY.value - window.innerHeight / 2) / window.innerHeight) * maxShift
-  return {
-    transform: `translate(${x}px, ${y}px)`
-  }
-})
+//const parallaxStyle = computed(() => {
+ // const maxShift = 30 // максимум смещения в px
+ // const x = ((mouseX.value - window.innerWidth / 2) / window.innerWidth) * maxShift
+ // const y = ((mouseY.value - window.innerHeight / 2) / window.innerHeight) * maxShift
+ // return {
+ //   transform: `translate(${x}px, ${y}px)`
+//  }
+//})
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('mousemove', (e) => {
-    mouseX.value = e.clientX
-    mouseY.value = e.clientY
-  })
-}
+//if (typeof window !== 'undefined') {
+//  window.addEventListener('mousemove', (e) => {
+//    mouseX.value = e.clientX
+ //   mouseY.value = e.clientY
+//  })
+//}
 
 const inboxStore = useInboxStore();
 const authStore = useAuthStore();
@@ -145,6 +145,7 @@ const logout = async () => {
     <ul>
       <li @click="goTo('/events')">Интересные места</li>
       <li @click="goTo('/events/season')">Сезонные события</li>
+      <li @click="goTo('/npc_quests')">Доска квестов</li>
     </ul>
   </div>
 </li>
@@ -225,9 +226,11 @@ const logout = async () => {
     </header>
 
     <!-- 🔥 Основной контент -->
-    <main>
-      <router-view></router-view>
-    </main>
+    <!-- 🔥 Основной контент -->
+<main class="page-content">
+  <router-view />
+</main>
+
 
     <!-- 🔥 Модальное окно личных сообщений -->
 <InboxModal v-if="inboxStore.isModalOpen" />
@@ -244,41 +247,61 @@ const logout = async () => {
 
 <style lang="scss">
 
-.bg-parallax {
-  position: fixed;
-  top: -50px;
-  left: -50px;
-  width: calc(100vw + 100px);
-  height: calc(100vh + 100px);
-  background: url('/images/purple_art.jpg') no-repeat center center;
-  background-size: contain;
-  z-index: -1;
-  transition: transform 0.4s ease-out;
-  pointer-events: none;
-  will-change: transform;
-  overflow: hidden;
-}
+//.bg-parallax {
+  //position: fixed;
+  //top: -50px;
+  //left: -50px;
+  //width: calc(100vw + 100px);
+  //height: calc(100vh + 100px);
+ // background: url('/images/purple_art.jpg') no-repeat center center;
+  //background-size: contain;
+ // z-index: -1;
+ // transition: transform 0.4s ease-out;
+ // pointer-events: none;
+ // will-change: transform;
+ // overflow: hidden;
+//}
 
 html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    overflow: hidden;
-    
-  }
-  
-  .layout {
+  height: auto;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
 
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    background-size: cover;
-  }
+.page-content {
+  padding-top: 70px;     // отступ вниз от фиксированной шапки
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+
+  
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; // ✅ вместо height: 100vh
+  background: url('/images/wasteland5.jpg') no-repeat center;
+  background-size: cover;
+}
+
+main {
+  margin-top: 70px;     // компенсирует фиксированную шапку
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+
   
   header, footer {
-    background:linear-gradient(80deg, rgba(38, 32, 39, 0.842), #4d8580d7, rgba(38, 32, 39, 0.842));
+    background:linear-gradient(80deg, rgba(28, 19, 31, 0.925), #4d8580ea, rgba(28, 19, 31, 0.925) );
     color: white;
-    backdrop-filter: blur(7px);
     border: 1px solid #000;
     padding: 6px 0;
     text-align: center;
@@ -335,22 +358,7 @@ html, body {
     }
   }
   
-  main {
-    zoom: 0.9;
-    flex: 1;
-    padding: 30px;
-    color: white;
-    font-family: 'JetBrains Mono', monospace;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    width: 100%;
-    height: 100%;
-    overflow-y: auto;
-    padding-top: 60px;
-    padding-bottom: 40px;
-  }
+
 
   .profile-dropdown {
   position: relative;

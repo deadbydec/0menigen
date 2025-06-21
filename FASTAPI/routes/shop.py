@@ -11,6 +11,7 @@ from models.models import Product, InventoryItem, ProductRarity, User
 from redis.asyncio import Redis as AsyncRedis
 from auth.cookie_auth import get_current_user_from_cookie
 from collections import defaultdict
+from datetime import datetime
 
 router = APIRouter()
 
@@ -48,10 +49,10 @@ async def get_random_products(db: AsyncSession):
 
     # 2) Настройки редкостей: (шанс, (min_items, max_items), (min_stock, max_stock))
     rarity_weights = {
-        ProductRarity.trash:     (100, (6, 8), (5, 7)),
-        ProductRarity.common:    (85,  (4, 6), (3, 5)),
-        ProductRarity.rare:      (30,  (1, 1), (1, 2)),
-        ProductRarity.epic:      (7,   (1, 1), (1, 1)),
+        ProductRarity.trash: (100, (8, 10), (1, 2)),
+        ProductRarity.common: (85, (8, 15), (2, 3)),
+        ProductRarity.rare:      (35,  (2, 4), (1, 1)),
+        ProductRarity.epic:      (12,   (1, 2), (1, 1)),
         ProductRarity.legendary: (4,   (1, 1), (1, 1)),
         ProductRarity.elder:     (1,   (1, 1), (1, 1)),
     }
@@ -89,6 +90,10 @@ async def get_random_products(db: AsyncSession):
                     continue
                 random_stock = random.randint(stock_min, stock_max)
 
+                # ✅ ОБНОВЛЯЕМ БД-СТОК
+                item.stock = random_stock
+                db.add(item)
+
                 selected_products.append({
                         "id": item.id,
                         "name": item.name,
@@ -101,70 +106,70 @@ async def get_random_products(db: AsyncSession):
                     })
 
     print("🛒 Обновлённый магазин:", [f"{p['name']} ({p['stock']} шт.)" for p in selected_products])
+
+     # 🧠 Без этого — изменения в БД не сохранятся
+    await db.commit()
+    
     return selected_products
 
 # --------------------------------
 #  Функция-обёртка c "накопительным" завозом
 # --------------------------------
-async def smart_shop_update(db: AsyncSession):
-    """Накопительный завоз: 5 раз «добавляем», на 6-й — полный сброс."""
-    count_key = "global_shop_refresh_count"
-    shop_key = "global_shop"
+# Ключ для хранения: в какой час был последний сброс
+last_reset_hour_key = "global_shop_reset_hour"
 
-    # Считываем счётчик из Redis
-    count_raw = await redis.get(count_key)
-    refresh_count = int(count_raw) if count_raw else 0
+async def smart_shop_update(db: AsyncSession):
+    shop_key = "global_shop"
+    reset_hour_key = last_reset_hour_key
+
+    # Считываем текущий час
+    current_hour = datetime.now().hour
+    last_reset_raw = await redis.get(reset_hour_key)
+    last_reset_hour = int(last_reset_raw) if last_reset_raw else None
+
+    # Проверка: пора ли сбрасывать
+    full_reset_needed = (last_reset_hour != current_hour)
 
     # Генерируем новую порцию товаров
     new_products = await get_random_products(db)
 
-    if refresh_count < 5:
-        # (1) Накопительный завоз
-        print(f"🔄 Завоз №{refresh_count+1} (накопительный)")
-
-        # Получаем текущий магазин
-        existing_raw = await redis.get(shop_key)
-        existing = json.loads(existing_raw) if existing_raw else []
-
-        # Добавляем только уникальные товары (по id) с накоплением стока
-        existing_dict = {p["id"]: p for p in existing}
-        for item in new_products:
-            if item["id"] in existing_dict:
-                existing_dict[item["id"]]["stock"] += item["stock"]
-            else:
-                existing_dict[item["id"]] = item
-
-        final_shop = list(existing_dict.values())
-
-        # Записываем обновлённый список в Redis (используем final_shop!)
-        await redis.set(shop_key, json.dumps(final_shop))
-        # Инкрементируем счётчик
-        await redis.set(count_key, refresh_count + 1)
-
-        # Шлём сокет-событие
-        await sio.emit("shop_update", {"products": final_shop}, namespace="/shop")
-
-    else:
-        # (2) Полный сброс, на 6-м вызове
-        print("💥 Полный сброс магазина!")
+    if full_reset_needed:
+        print(f"💥 Новый час ({current_hour}) — сбрасываем магазин!")
         await redis.set(shop_key, json.dumps(new_products))
-        await redis.set(count_key, 0)
-
-        # Шлём сокет-событие
+        await redis.set(reset_hour_key, current_hour)
         await sio.emit("shop_update", {"products": new_products}, namespace="/shop")
+        return
 
-    print(f"✔ Завоз завершён. Текущий счётчик = {await redis.get(count_key)}")
+    # 🟢 Иначе — накопительный завоз
+    print(f"🔄 Накопительный завоз в {datetime.now().strftime('%H:%M:%S')}")
+    existing_raw = await redis.get(shop_key)
+    existing = json.loads(existing_raw) if existing_raw else []
+
+    existing_dict = {p["id"]: p for p in existing}
+    for item in new_products:
+        if item["id"] in existing_dict:
+            existing_dict[item["id"]]["stock"] += item["stock"]
+        else:
+            existing_dict[item["id"]] = item
+
+    final_shop = list(existing_dict.values())
+    await redis.set(shop_key, json.dumps(final_shop))
+    await sio.emit("shop_update", {"products": final_shop}, namespace="/shop")
+
+    print(f"✔ Магазин обновлён. Всего товаров: {len(final_shop)}")
 
 
 # --------------------------------
 #  Теперь используем smart_shop_update
 # --------------------------------
 async def background_shop_updater():
-    """Раз в 20 сек вызываем smart_shop_update, который сам решает «добавлять» или «сбросить»."""
+    print("🚀 Фоновый процесс background_shop_updater() запущен!")
+    #Раз в 20 сек вызываем smart_shop_update, который сам решает «добавлять» или «сбросить».
     while True:
-        await asyncio.sleep(random.randint(50, 500))
-        async with get_db() as db:
+        await asyncio.sleep(random.randint(15, 40))
+        async for db in get_db():
             await smart_shop_update(db)
+
 
 
 # ===========================

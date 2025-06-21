@@ -20,11 +20,13 @@ def build_inventory_item(item: InventoryItem) -> Dict:
                 "is_hatched": incubation.is_hatched,
             } if incubation else None
         ),
+        "product_id": item.product.id,  # 🔥 ВОТ ЭТА СТРОКА — ДОБАВЬ ЕЁ
         "product": {
             "name": item.product.name,
             "image": item.product.image,
             "description": item.product.description,
             "rarity": item.product.rarity.value,
             "product_type": item.product.product_type.value,
+            "types": item.product.types or [],  # ✅ ВОТ ЭТО
         },
     }

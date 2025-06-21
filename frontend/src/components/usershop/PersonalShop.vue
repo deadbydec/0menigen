@@ -1,5 +1,7 @@
 <template>
-  <div class="personal-shop-wrap">
+  <div class="page-inner">
+  <div class="personal-shop-wrap" :style="{ marginTop: actualMarginTop }">
+
     <h2>Мой магазин</h2>
 
     <!-- Кнопки зависят от режима showTransactions -->
@@ -101,7 +103,7 @@
         <p>У вас пока нет продаж.</p>
       </div>
     </div>
-  </div>
+  </div></div>
 </template>
 
 <script setup>
@@ -204,6 +206,31 @@ async function withdrawMoney() {
   }
 }
 
+//const actualMarginTop = computed(() => {
+ // return showTransactions.value ? '0px' : wrapperMarginTop.value
+//})
+
+//const wrapperMarginTop = computed(() => {
+  //const count = allItems.value.length
+
+ // if (count > 75) return "3500px"
+ // if (count > 70) return "3300px"
+ // if (count > 65) return "3100px"
+//  if (count > 60) return "2900px"
+ // if (count > 55) return "2700px"
+ // if (count > 50) return "2500px"
+ // if (count > 45) return "2300px"
+ // if (count > 40) return "2100px"
+ // if (count > 35) return "1900px"
+ // if (count > 30) return "1700px"
+ // if (count > 25) return "1500px"
+ // if (count > 20) return "1300px"
+ // if (count > 15) return "1100px"
+ // if (count > 10) return "900px"
+ // if (count > 5) return "500px"
+ // return "100px"
+//})
+
 // ======================
 // Утил: форматируем дату
 // ======================
@@ -216,28 +243,24 @@ onMounted(fetchAllItems)
 
 <style scoped lang="scss">
 .personal-shop-wrap {
-  transform: scale(0.9);
-  border: 1px solid rgb(0, 0, 0);
+  border: 1px solid rgb(196, 196, 196);
   color: #fff;
   padding: 1rem;
-  background-color: rgba(0, 0, 0, 0.4);  
-  backdrop-filter: blur(7px);
-  border-radius: 8px;
+  background: #181818e7;
+  border-radius: 18px;
   width: 850px;
+  padding-bottom: 50px;
   max-width: 900px;
-  margin: 0 auto;
-  box-shadow: 0 0 15px rgba(0,0,0,0.4);
 
   h2 {
     margin-bottom: 1rem;
     font-size: 1.5rem;
     letter-spacing: 0.5px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.7);
   }
 
   .buttons {
     display: flex;
-    gap: 0.5rem;
+    gap: 2rem;
     margin-bottom: 1rem;
 
     button {
@@ -246,9 +269,8 @@ onMounted(fetchAllItems)
       color: #fff;
       padding: 0.5rem 1rem;
       cursor: pointer;
-      border-radius: 4px;
+      border-radius: 11px;
       text-transform: uppercase;
-      transition: background 0.2s ease;
 
       &:hover {
         background: rgba(255,255,255,0.2);
@@ -263,7 +285,7 @@ onMounted(fetchAllItems)
   .shop-table {
     width: 100%;
     border-collapse: collapse;
-    background-color: rgba(255, 255, 255, 0.06);
+    background: #18181879;
 
     thead {
       background-color: rgba(255, 255, 255, 0.2);
@@ -306,12 +328,11 @@ onMounted(fetchAllItems)
     gap: 0.5rem;
 
     .prod-image {
-      width: 60px;
+      width: 80px;
       height: auto;
       object-fit: cover;
       border-radius: 4px;
       border: 1px solid rgba(255,255,255,0.2);
-      box-shadow: 0 0 6px rgba(0,0,0,0.5);
     }
 
     .prod-name {

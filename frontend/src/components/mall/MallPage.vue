@@ -1,7 +1,5 @@
 <template>
   <div class="mall-container">
-    <h1></h1>
-
     <!-- Убираем ограничение по высоте на shop-list, прокрутка будет по всей странице -->
     <div class="shop-list">
       <!-- Генерируем карточки магазинов -->
@@ -76,22 +74,10 @@ const enterShop = (route) => {
 }
 </script>
 
-<style scoped>
+<style lang="scss">
 .mall-container {
-  transform: scale(0.9);
   text-align: center;
   padding: 20px;
-  height: 100vh; /* Устанавливаем 100% высоты экрана */
-  overflow-y: auto; /* Прокрутка по всей высоте экрана */
-}
-
-/* Скрытие прокрутки, но она остаётся функциональной */
-.mall-container::-webkit-scrollbar {
-  width: 0px;  /* Прячем полосу прокрутки */
-}
-
-.mall-container::-webkit-scrollbar-thumb {
-  background: transparent;  /* Оставляем полосу прокрутки полностью прозрачной */
 }
 
 /* Вертикальный список магазинов */
@@ -99,25 +85,25 @@ const enterShop = (route) => {
   display: flex;
   flex-direction: column;   /* Карточки идут в столбик */
   gap: 20px;
-  margin-top: 20px;
+  margin-top: 100px;
   padding-right: 15px;  /* Для прокрутки с правой стороны */
-  padding-bottom: 20px; /* Чтобы нижние карточки не скрывались */
+  padding-bottom: 50px; /* Чтобы нижние карточки не скрывались */
 }
 
 /* Оформление карточек */
 .shop-card {
-  border: 1px solid #000;
-  background: #1d1c1d93;
+  width: 100%;
+  border: 1px solid rgb(196, 196, 196);
+  background: #181818e7;
   padding: 1.5rem;
-  border-radius: 0.75rem;
+  border-radius: 20px;
   text-align: center;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   text-decoration: none;
   color: #fff;
-  width: 600px;  /* Устанавливаем фиксированную ширину для карточек */
-  height: 350px; /* Высота карточки */
-  max-width: 90%;
-  margin: 0 auto; /* Центрируем карточки */
+  height: 290px; /* Зафиксированная высота карточки */
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .shop-card:hover {
@@ -126,8 +112,9 @@ const enterShop = (route) => {
 
 .card-img {
   width: 100%;
-  height: 200px;  /* Устанавливаем высоту изображения */
+  height: 180px;  /* Высота изображения */
   object-fit: cover;
+  display: block;
   border-radius: 0.5rem;
 }
 

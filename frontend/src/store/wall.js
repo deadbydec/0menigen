@@ -84,6 +84,17 @@ export const useWallStore = defineStore('wall', () => {
     }
   }
 
+    // 🗑️ Удаление поста
+  async function deleteWallPost(postId) {
+    try {
+      await axios.delete(`/wall/${postId}/delete`)
+      wallPosts.value = wallPosts.value.filter(p => p.id !== postId)
+    } catch (err) {
+      console.error('❌ Ошибка удаления поста:', err)
+    }
+  }
+
+
   return {
     wallPosts,
     targetUserId,
@@ -91,7 +102,8 @@ export const useWallStore = defineStore('wall', () => {
     addWallPost,
     toggleLike,
     fetchComments,
-    addCommentToPost
+    addCommentToPost,
+    deleteWallPost
   }
 })
 

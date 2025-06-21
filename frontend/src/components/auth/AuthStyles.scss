@@ -13,20 +13,21 @@
 
 /* Карточка формы */
 .auth-card {
-  background:rgba(20, 20, 20, 0.8); // Тёмный фон с прозрачностью
+  background: #181818e7;
   padding: 25px;
   border-radius: 10px;
-  width: 100%;
-  max-width: 360px;
+  border: 1px solid rgb(196, 196, 196);
+  width: 350px;
+  height: 300px;
   text-align: center;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
 }
 
 /* Заголовки */
-h2 {
+h1 {
   color: #fff;
   font-size: 20px;
-  margin-bottom: 15px;
+  margin: 0px;
 }
 
 /* Поля ввода */
@@ -47,7 +48,7 @@ h2 {
     transition: border 0.3s ease;
 
     &:focus {
-      border-color: #7008c5; // Красный при наведении
+      background:linear-gradient(50deg, rgb(24, 24, 24), rgb(2, 85, 81),rgb(5, 235, 196));
       outline: none;
     }
   }
@@ -56,10 +57,11 @@ h2 {
 /* Кнопки */
 button {
   width: 45%; // Делаем кнопку по ширине полей
-  background: #7008c5;
+  background:linear-gradient(50deg, rgb(24, 24, 24), rgb(2, 85, 81),rgb(5, 235, 196));
   color: #fff;
   border: none;
   padding: 10px;
+  border: 1px solid rgb(196, 196, 196);
   border-radius: 5px;
   cursor: pointer;
   font-size: 14px;

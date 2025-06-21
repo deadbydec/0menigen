@@ -1,20 +1,11 @@
 <template>
   <div class="achievements-block">
-    <h3>Достижения</h3>
+    <h2>Достижения</h2>
 
-    <div class="hex-grid">
-      <div 
-        v-for="(ach, index) in paddedAchievements" 
-        :key="index" 
-        class="hex-cell"
-        :class="{ placeholder: !ach.unlocked }"
-        @mouseover="hoveredAchievement = ach.unlocked ? ach : null"
-        @mouseleave="hoveredAchievement = null"
-      >
-        <img v-if="ach.unlocked" :src="ach.icon" class="achievement-icon" />
-        <div v-else class="placeholder-icon">🔒</div> <!-- Заглушка -->
-      </div>
-    </div>
+    <div class="achievements-placeholder">
+  <p class="placeholder-text">⚙ Раздел с достижениями появится в одном из следующих обновлений. Пока просто представь, что ты — победитель.</p>
+</div>
+
 
     <!-- Всплывающее название ачивки -->
     <div v-if="hoveredAchievement" class="achievement-tooltip">
@@ -22,8 +13,7 @@
       <span class="date">{{ formatDate(hoveredAchievement.date) }}</span>
     </div>
 
-    <!-- Кнопка "Показать все" -->
-    <button class="show-all-btn" @click="showAll = true">Все</button>
+
 
     <!-- Модалка с полным списком ачивок -->
     <AchievementModal v-if="showAll" :achievements="achievements" @close="showAll = false" />
@@ -61,13 +51,18 @@ const formatDate = (date) => new Date(date).toLocaleDateString();
 
 <style scoped>
 .achievements-block {
-  background: white;
-  border: 2px solid rgba(0, 0, 0, 0.692);
-  border-radius: 10px;
+  gap: 10px;
+  height: 190px;
+  max-width: 588px;
+  backdrop-filter: blur(7px);
+  background: rgba(38, 32, 39, 0.48);
+  border: 1px solid #2e2c2c;
+  border-radius: 8px;
   padding: 10px;
-  text-align: center;
-  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
 }
+
+
 
 .hex-grid {
   display: grid;
@@ -129,4 +124,41 @@ const formatDate = (date) => new Date(date).toLocaleDateString();
   margin-top: 10px;
   border: 1px solid #2e2c2c;
 }
+
+.achievements-block h2 {
+  position: relative;
+  font-size: 18px;
+  text-align: left;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.achievements-block h2::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 1px;
+  background-color: white;
+  opacity: 0.4; /* 👈 мягкий, неяркий акцент */
+  margin: 6px auto 0;
+  border-radius: 1px;
+}
+
+.achievements-placeholder {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.placeholder-text {
+  margin: 0;
+  line-height: 1.4;
+}
+
 </style>

@@ -24,8 +24,8 @@ async function addToWardrobe (inventoryId) {
   await fetchWardrobe()
 }
 
-async function removeFromWardrobe (productId) {
-  await api.post('/wardrobe/remove', { product_id: productId, quantity: 1 }, { withCredentials: true })
+async function removeFromWardrobe (wardrobeId) {
+  await api.post('/wardrobe/remove', { wardrobe_id: wardrobeId }, { withCredentials: true })
   toast.addToast('⬅ Вернули в инвентарь', { type: 'success' })
   await fetchWardrobe()
 }

@@ -3,31 +3,23 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/utils/axios'
 
-export const usePetsStore = defineStore('pets', () => {
-  /* ── state ───────────────────────────────────────────── */
-  const myPets       = ref([])   // список всех питомцев текущего игрока
-  const currentPet   = ref(null) // подробности выбранного питомца
 
+export const usePetsStore = defineStore('pets', () => {
+  const myPets       = ref([])
+  const currentPet   = ref(null)
   const isLoadingAll = ref(false)
   const isLoadingOne = ref(false)
 
-  /* ── actions ─────────────────────────────────────────── */
-
-  /** Получить всех питомцев пользователя */
   async function fetchAllPets () {
-    
     isLoadingAll.value = true
-    
     try {
       const res = await api.get('/pets/', { withCredentials: true })
       myPets.value = res.data
-      console.log('🐾 myPets после запроса:', res.data)
     } finally {
       isLoadingAll.value = false
     }
   }
 
-  /** Получить конкретного питомца по id */
   async function fetchPetById (id) {
     if (!id) return
     isLoadingOne.value = true
@@ -39,14 +31,56 @@ export const usePetsStore = defineStore('pets', () => {
     }
   }
 
-  /** Сбросить текущего питомца (при уходе со страницы) */
   function clearCurrentPet () {
     currentPet.value = null
   }
 
-  /* ── expose ──────────────────────────────────────────── */
+  async function updatePetBio (petId, biography) {
+    const res = await api.post(`/pets/${petId}/bio`, { biography }, { withCredentials: true })
+    return res.data
+  }
+
+async function tameCompanion (petId, product_id) {
+  const res = await api.post(`/pets/${petId}/companion`, {
+    product_id,
+    name: "",
+    description: ""
+  }, { withCredentials: true })
+
+  if (res.data.success) {
+    await fetchPetById(petId)  // 🔄 обновляем текущее состояние питомца
+  }
+
+  return res.data
+}
+
+
+  async function editCompanion (petId, name, description) {
+    const res = await api.post(`/pets/${petId}/companion/edit`, {
+      name,
+      description
+    }, { withCredentials: true })
+    return res.data
+  }
+
+  async function setFavoriteItems (petId, item_ids) {
+    const res = await api.post(`/pets/${petId}/favorite-items`, {
+      item_ids
+    }, { withCredentials: true })
+    return res.data
+  }
+
+  async function removeCompanion(petId) {
+  const res = await api.post(`/pets/${petId}/companion/remove`)
+  if (res.data.success) {
+    await fetchPetById(petId)
+  }
+}
+
+
   return {
     myPets,
+    removeCompanion,
     currentPet,
     isLoadingAll,
     isLoadingOne,
@@ -54,5 +88,10 @@ export const usePetsStore = defineStore('pets', () => {
     fetchAllPets,
     fetchPetById,
     clearCurrentPet,
+    updatePetBio,
+    tameCompanion,
+    editCompanion,
+    setFavoriteItems,
   }
 })
+

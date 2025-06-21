@@ -14,23 +14,23 @@ from database import async_session
 # Подключение к Redis (асинхронно)
 redis_client = redis_async.from_url("redis://localhost", decode_responses=True)
 
-async def shop_updater_loop():
-    while True:
-        try:
-            print("🔁 Обновляем магазин...")
+#async def shop_updater_loop():
+#    while True:
+#        try:
+#            print("🔁 Обновляем магазин...")
 
-            async with async_session() as db:
-                new_products = await get_random_products(db)
+#            async with async_session() as db:
+#                new_products = await get_random_products(db)
 
-            await redis_client.set("global_shop", json.dumps(new_products))
-            await sio.emit("shop_updated", {"products": new_products})
+#            await redis_client.set("global_shop", json.dumps(new_products))
+#            await sio.emit("shop_updated", {"products": new_products})
 
-            print("✅ Магазин обновлён, ждём 15 минут...")
+#            print("✅ Магазин обновлён, ждём 15 минут...")
 
-        except Exception as e:
-            print(f"🔥 Ошибка обновления магазина: {e}")
+#        except Exception as e:
+#            print(f"🔥 Ошибка обновления магазина: {e}")
 
-        await asyncio.sleep(1 * 60)
+#        await asyncio.sleep(1 * 60)
 
 
 
@@ -85,7 +85,8 @@ async def add_or_update_products_from_json(db: AsyncSession):
         "book": ProductType.book,
         "tech": ProductType.tech,
         "sticker": ProductType.sticker,
-        "toilet": ProductType.toilet
+        "toilet": ProductType.toilet,
+        "companion": ProductType.companion
     }
 
     PROTECTED_RARITIES = {
@@ -136,6 +137,11 @@ async def add_or_update_products_from_json(db: AsyncSession):
             if product.custom != data.get("custom", {}):
                 product.custom = data.get("custom", {})
                 updated = True
+            if product.types != data.get("types", []):
+                product.types = data.get("types", [])
+                updated = True
+
+
 
             if updated:
                 updated_count += 1
@@ -148,6 +154,7 @@ async def add_or_update_products_from_json(db: AsyncSession):
                 image=data["image"],
                 rarity=rarity_map[data["rarity"]],
                 product_type=type_map[data["product_type"]],
+                types=data.get("types", []),
                 stock=1,
                 custom=data.get("custom", {})
             )

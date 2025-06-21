@@ -10,7 +10,7 @@ const parallaxStyle = computed(() => {
   const y = ((mouseY.value - window.innerHeight / 2) / window.innerHeight) * maxShift
   return {
     transform: `translate(${x}px, ${y}px)`
-  }
+ }
 })
 
 if (typeof window !== 'undefined') {
@@ -42,9 +42,9 @@ if (typeof window !== 'undefined') {
   left: -50px;
   width: calc(100vw + 100px);
   height: calc(100vh + 100px);
-  background: url('/images/purple_art2.png') no-repeat center center;
-  background-size: 98%;
+  background-size: 100%;
   z-index: -1;
+  opacity: 0.90;
   transition: transform 0.4s ease-out;
   pointer-events: none;
   will-change: transform;

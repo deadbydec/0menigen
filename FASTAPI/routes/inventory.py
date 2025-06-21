@@ -312,29 +312,36 @@ async def discard_item(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user_from_cookie)
 ):
-    """Удаляет предмет из инвентаря (через куки-авторизацию)"""
+    """Удаляет одну единицу предмета из инвентаря"""
     result = await db.execute(
-    select(InventoryItem)
-    .where(InventoryItem.id == item_id)
-    .options(selectinload(InventoryItem.product))
-)
+        select(InventoryItem)
+        .where(InventoryItem.id == item_id)
+        .options(selectinload(InventoryItem.product))
+    )
     inventory_item = result.scalar()
 
     if not inventory_item or inventory_item.user_id != user.id:
         raise HTTPException(status_code=403, detail="Этот предмет вам не принадлежит!")
 
     item_name = inventory_item.product.name
-    # Кидаем на свалку
+
+    # 💥 Кидаем только 1 шт.
     landfill = LandfillItem(
-    product_id=inventory_item.product_id,
-    quantity=inventory_item.quantity,
-    thrown_by_id=user.id
+        product_id=inventory_item.product_id,
+        quantity=1,
+        thrown_by_id=user.id
     )
     db.add(landfill)
-    await db.delete(inventory_item)
-    await db.commit()
 
-    return {"success": True, "message": f"Предмет {item_name} выброшен!"}
+    # 💥 Уменьшаем количество в инвентаре
+    if inventory_item.quantity > 1:
+        inventory_item.quantity -= 1
+    else:
+        await db.delete(inventory_item)
+
+    await db.commit()
+    return {"success": True, "message": f"Вы выбросили 1x {item_name}!"}
+
 
 
 @router.post("/recycle/{item_id}")

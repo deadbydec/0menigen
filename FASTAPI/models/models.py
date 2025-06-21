@@ -1,7 +1,7 @@
 import json
 import enum
 from datetime import datetime, timezone, date
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, select, Float, ARRAY, TIMESTAMP, Date, func, JSON, UniqueConstraint, Index, text
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, select, Float, ARRAY, TIMESTAMP, Date, func, JSON, UniqueConstraint, Index, text, BigInteger, Numeric
 from sqlalchemy.dialects.postgresql import INET, JSONB
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import Enum as SqlEnum
 from database import async_session, Base  # ✅ Теперь используется правильный sessionmaker!
 from sqlalchemy.ext.mutable import MutableList
+
 
 
 # Асинхронный движок базы данных
@@ -21,6 +22,38 @@ async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False
 # Базовый класс моделей
 
 UTC = timezone.utc
+
+
+class VipStatus(str, enum.Enum):
+    NONE = "none"
+    CRYPTOVOID = "cryptovoid"
+    NULLOVERLORD = "nulloverlord"
+
+    def to_russian(self):
+        return {
+            "none": "Мортал",
+            "cryptovoid": "Криптовойд",
+            "nulloverlord": "Иммортал"
+        }[self.value]
+
+
+class VipSubscription(Base):
+    __tablename__ = "vip_subscriptions"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"))
+    status = Column(SqlEnum(VipStatus), nullable=False)
+    started_at = Column(DateTime(timezone=True), default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Источник активации
+    source = Column(String(100), default="donation")  # например: "donation", "admin", "promo"
+    comment = Column(String(255), nullable=True)      # зачем / по какому поводу
+
+    is_active = Column(Boolean, default=True)
+
+    user = relationship("User", back_populates="vip_subscriptions")
+
 
 class GenderEnum(str, enum.Enum):
     MALE = "MALE"
@@ -51,11 +84,6 @@ class UserType(str, enum.Enum):
         }[self.value]
 
 
-class VipStatus(str, enum.Enum):
-    NONE = "none"
-    CRYPTOVOID = "cryptovoid"
-    NULLOVERLORD = "nulloverlord"
-
 
 # 🔥 КЛАСС ЮЗЕРА В FastAPI
 class User(Base):
@@ -71,9 +99,12 @@ class User(Base):
     avatar = Column(String(200), nullable=False, default='default_avatar.png')
     bio = Column(String(500), default='Напишите о себе...')
     coins = Column(Integer, default=500)
-    nullings = Column(Float, default=0.0)  # Десятичные числа, но с возможными округлениям
+    nullings = Column(Numeric(10, 2), default=0.0, nullable=False) #round(float(user.nullings), 2)
+    specialk = Column(Integer, default=0)  # 🔑 Особые ключи: для ивентов, сундуков, эксклюзивного доступа
     xp = Column(Integer, default=0)
+    luck = Column(Integer, default=50)  # 🎲 0–100
     level = Column(Integer, default=1)
+    theme_id = Column(Integer, ForeignKey("themes.id"), nullable=True)
     layout = Column(Text, nullable=True)
     total_playtime = Column(Float, default=0.0)
     gender = Column(SqlEnum(GenderEnum, name="gender"), default=GenderEnum.UNKNOWN, nullable=False)
@@ -89,6 +120,8 @@ class User(Base):
     vault_balance = Column(Integer, default=0)  # Монеты в сейфе
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
     pet_slots = Column(Integer, default=3)  # 💡 по умолчанию 3 питомца
+    role_assigned_at = Column(DateTime(timezone=True), default=func.now())
+
     
     race = relationship("Race", backref="players")  # Связь с расой
     toilet_doom = relationship("ToiletDoom", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -104,7 +137,6 @@ class User(Base):
     lazy="selectin",
     cascade="all, delete-orphan"
 )
-    role = relationship("Role", back_populates="users")
     landfill_pickups = relationship("LandfillPickupLimit", back_populates="user", cascade="all, delete-orphan")
     thrown_items = relationship("LandfillItem", back_populates="thrown_by", cascade="all, delete-orphan")
     shop_items = relationship("PersonalShopItem", back_populates="user", cascade="all, delete")
@@ -115,10 +147,71 @@ class User(Base):
     back_populates="user",
     cascade="all, delete-orphan"
 )
+    vip_subscriptions = relationship(
+    "VipSubscription",
+    back_populates="user",
+    cascade="all, delete-orphan",
+    order_by="desc(VipSubscription.started_at)"
+)
+    role = relationship("Role", back_populates="users")
+    clans = relationship(
+    "Clan",
+    secondary="clan_members",
+    primaryjoin="User.id==clan_members.c.user_id",
+    secondaryjoin="Clan.id==clan_members.c.clan_id",
+    viewonly=True
+)
+
+    # ⛳ лидер клана
+    # 👑 Ведёт как лидер
+    clans_led = relationship("Clan", backref="leader", foreign_keys="[Clan.leader_id]")
+# 🤝 Членство
+    clan_memberships = relationship("ClanMember", back_populates="user", cascade="all, delete-orphan")
+# 🛡 Офицер
+    clan_officerships = relationship("ClanOfficer", back_populates="user", cascade="all, delete-orphan")
+# 📦 Клановые вклады
+    clan_deposits = relationship("ClanBankItem", backref="depositor", foreign_keys="[ClanBankItem.deposited_by]")
+# 📈 Лог кланового опыта
+    clan_xp_logs = relationship("ClanXPLog", back_populates="user")
+# 💬 Сообщения в клановом чате
+    clan_messages = relationship("ClanMessage", back_populates="user", cascade="all, delete-orphan")
+# 🛠 Модерация чатов
+    clan_chat_moderator_of = relationship("ClanChatMod", back_populates="user", cascade="all, delete-orphan")
+
+# 🚫 Кланы, где замучен
+    muted_in_clans = relationship(
+    "ClanMute", back_populates="user", foreign_keys="[ClanMute.user_id]", cascade="all, delete-orphan"
+    )
+# 👮‍♂️ Кланы, где мутил других
+    muted_others_in_clans = relationship(
+    "ClanMute", backref="muted_by_user", foreign_keys="[ClanMute.muted_by]"
+    )
+
+    theme = relationship("Theme", backref="user")
+
+
+    @property
+    def is_admin(self):
+        return self.role and self.role.name.lower() == "admin"
+
+    @property
+    def is_moderator(self):
+        return self.role and self.role.name.lower() == "moderator"
+
+    @property
+    def is_tester(self):
+        return self.role and self.role.name.lower() == "tester"
+
+    @property
+    def is_ai(self):
+        return self.role and self.role.name.lower() == "ai"
+    
+    @property
+    def is_user(self):
+        return self.role and self.role.name.lower() == "user"
 
     def get_xp_to_next_level(self) -> int:
         return 100 + (self.level * 20)
-
 
     def add_nickname(self, new_username):
         if self.username != new_username:
@@ -135,10 +228,8 @@ class User(Base):
             if len(self.last_ips) > 5:  # Храним только последние 5 IP
                 self.last_ips.pop(0)
 
-
     def __repr__(self):
         return f'<User {self.username}, Level {self.level}, XP {self.xp}>'
-
 
 
     async def add_xp(self, session: AsyncSession, amount: int):
@@ -150,12 +241,23 @@ class User(Base):
             self.xp -= xp_needed
             xp_needed = self.get_xp_to_next_level()
 
+    def has_active_vip(self):
+        return self.vip_status != VipStatus.NONE
 
 
 # 🔥 ФУНКЦИИ ПОЛУЧЕНИЯ БД-СЕССИИ
 async def get_db():
     async with async_session() as session:
         yield session
+
+
+class Theme(Base):
+    __tablename__ = "themes"
+
+    id = Column(Integer, primary_key=True)
+    code = Column(String(30), unique=True, nullable=False)  # например: "dark_glitch"
+    display_name = Column(String(100))  # например: "Глитч в ночи"
+    preview_url = Column(String(300))  # ссылка на картинку или CSS
 
 
 class Race(Base):
@@ -175,6 +277,7 @@ class Role(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(50), unique=True, nullable=False)
+    display_name = Column(String(100), nullable=True)
 
     users = relationship("User", back_populates="role")
 
@@ -267,54 +370,6 @@ class Friendship(Base):
     user = relationship("User", foreign_keys=[user_id], back_populates="sent_friend_requests")
     friend = relationship("User", foreign_keys=[friend_id], back_populates="received_friend_requests")
 
-    @staticmethod
-    async def get_friends(user_id):
-        """Возвращает список друзей пользователя (ASYNC)"""
-        async with async_session() as session:
-            result = await session.execute(
-                select(Friendship).where(Friendship.user_id == user_id, Friendship.status == "accepted")
-            )
-            return result.scalars().all()
-
-    @staticmethod
-    async def add_friend(user_id, friend_id):
-        """Добавляет друга (ASYNC)"""
-        async with async_session() as session:
-            new_friendship = Friendship(user_id=user_id, friend_id=friend_id, status="pending")
-            session.add(new_friendship)
-            await session.commit()
-            return {"message": "Запрос в друзья отправлен!"}
-
-    @staticmethod
-    async def accept_friend_request(user_id, friend_id):
-        """Принимает запрос в друзья (ASYNC)"""
-        async with async_session() as session:
-            friendship = await session.execute(
-                select(Friendship).where(Friendship.user_id == friend_id, Friendship.friend_id == user_id, Friendship.status == "pending")
-            )
-            friendship = friendship.scalar()
-            if friendship:
-                friendship.status = "accepted"
-                await session.commit()
-                return {"message": "Друг добавлен!"}
-            return {"error": "Запрос не найден!"}
-
-    @staticmethod
-    async def remove_friend(user_id, friend_id):
-        """Удаляет друга (ASYNC)"""
-        async with async_session() as session:
-            friendship = await session.execute(
-                select(Friendship).where(
-                    (Friendship.user_id == user_id, Friendship.friend_id == friend_id) |
-                    (Friendship.user_id == friend_id, Friendship.friend_id == user_id)
-                )
-            )
-            friendship = friendship.scalar()
-            if friendship:
-                await session.delete(friendship)
-                await session.commit()
-                return {"message": "Друг удалён!"}
-            return {"error": "Друг не найден!"}
 
 
 class AchievementTriggerType(str, enum.Enum):
@@ -459,6 +514,7 @@ class ProductType(enum.Enum):
     tech = "гаджет"
     sticker = "наклейка"
     toilet = "туалет"
+    companion = "спутник"
 
 
 class ProductRarity(enum.Enum):
@@ -471,7 +527,7 @@ class ProductRarity(enum.Enum):
     epic = "эпический"
     legendary = "легендарный"
     relict = "реликтовый"   # 🧬 новый elder
-
+    elder = "древний"
     vanished = "исчезнувший" #предметы, выведенные из игры
     
     prize = "призовой" #предметы за участие в мини-играх
@@ -494,6 +550,7 @@ class Product(Base):
     price = Column(Integer, nullable=False)  # Цена в коинах
     image = Column(String(100), nullable=True)  # Добавляем поле для изображения
     rarity = Column(SqlEnum(ProductRarity, name="product_rarity"), nullable=False, default=ProductRarity.common)
+    types = Column(ARRAY(String), default=list)
     product_type = Column(SqlEnum(ProductType, name="product_type"), nullable=False, default=ProductType.drink)
     stock = Column(Integer, nullable=False, default=1)
     custom = Column(JSON, default=dict)
@@ -510,7 +567,8 @@ class Product(Base):
 )
 
     def __repr__(self):
-        return f"<Product {self.name}, Type: {self.product_type.value}, Rarity: {self.rarity.value}>"
+        return f"<Product {self.name}, Types: {self.types or [self.product_type.value]}, Rarity: {self.rarity.value}>"
+
 
 class InventoryItem(Base):
     __tablename__ = "user_inventory"
@@ -939,9 +997,26 @@ class Pet(Base):
     created_at = Column(DateTime, default=func.now())
     last_update = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    appearance = relationship("PetAppearance", back_populates="pet",
-                              cascade="all, delete-orphan")
+    # 🆕 Любимые артефакты для профиля (можно рендерить как отдельные карточки)
+    favorite_items = Column(JSON, default=list)  # список product_id или кастомных ключей
+
+    # 🆕 Био питомца — редактируемая текстовая история
+    biography = Column(Text, default="")  # можно отображать в профиле
+
+    # 🆕 Приручённый косметический спутник (одно существо)
+    companion_id = Column(Integer, ForeignKey("products.id"), nullable=True)  # FK на предмет-спутник
+
+    # 🆕 Картинка спутника (снапшот)
+    companion_image = Column(String(255), nullable=True)
+
+    # 🆕 Имя и описание спутника — можно кастомизировать
+    companion_name = Column(String(100), default="")
+    companion_description = Column(Text, default="")
+
+    # 💞 Связи
+    appearance = relationship("PetAppearance", back_populates="pet", cascade="all, delete-orphan")
     user = relationship("User", back_populates="pets")
+    companion = relationship("Product", uselist=False)  # доступ к Product напрямую
 
 
 class Incubation(Base):
@@ -1094,6 +1169,179 @@ class Contest(Base):
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=func.now())
+
+
+
+class QuestNPC(Base):
+    __tablename__ = "quest_npcs"
+    id = Column(String, primary_key=True)
+    name = Column(String)
+    avatar = Column(String)
+    quote = Column(String)
+    limit_per_day = Column(Integer, default=1)
+    categories = Column(JSON, default=[])
+    rarity_pool = Column(JSON, default={})
+    reward_base = Column(JSON, default={})
+    active = Column(Boolean, default=True)
+
+
+class DailyQuest(Base):
+    __tablename__ = "daily_quests"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id"), index=True)
+    npc_id = Column(String, ForeignKey("quest_npcs.id"))
+    item_requested = Column(JSON)
+    completed = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    expires_at = Column(DateTime, nullable=False)
+    failed = Column(Boolean, default=False)
+
+    npc = relationship("QuestNPC", backref="quests")
+    user = relationship("User", backref="daily_quests")
+
+
+class Clan(Base):
+    __tablename__ = "clans"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(20), unique=True, nullable=False)
+    description = Column(Text, default="")
+    avatar_url = Column(String, default="")
+    pinned_news = Column(Text, default="")
+
+    leader_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"))
+    is_private = Column(Boolean, default=True)
+    is_approved = Column(Boolean, default=True)
+
+
+    level = Column(Integer, default=1)
+    xp = Column(BigInteger, default=0)
+    xp_this_week = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+
+    members = relationship("ClanMember", back_populates="clan", cascade="all, delete")
+    officers = relationship("ClanOfficer", back_populates="clan", cascade="all, delete")
+    bank_items = relationship("ClanBankItem", back_populates="clan", cascade="all, delete")
+
+
+class ClanMember(Base):
+    __tablename__ = "clan_members"
+
+    id = Column(Integer, primary_key=True)
+    clan_id = Column(Integer, ForeignKey("clans.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"))
+    joined_at = Column(DateTime(timezone=True), default=func.now())
+    can_withdraw = Column(Boolean, default=False)  # право брать из банка
+    __table_args__ = (
+        UniqueConstraint("clan_id", "user_id", name="uq_clan_user"),
+    )
+    clan = relationship("Clan", back_populates="members")
+    user = relationship("User", back_populates="clan_memberships")  # в ClanMember
+
+
+
+class ClanOfficer(Base):
+    __tablename__ = "clan_officers"
+
+    id = Column(Integer, primary_key=True)
+    clan_id = Column(Integer, ForeignKey("clans.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"))
+    joined_at = Column(DateTime(timezone=True), default=func.now())
+
+    # В ClanOfficer
+    __table_args__ = (
+    UniqueConstraint("clan_id", "user_id", name="uq_clan_officer"),
+    )
+
+    clan = relationship("Clan", back_populates="officers")
+    user = relationship("User", back_populates="clan_officerships")  # в ClanOfficer
+
+class ClanBankItem(Base):
+    __tablename__ = "clan_bank_items"
+
+    id = Column(Integer, primary_key=True)
+    clan_id = Column(Integer, ForeignKey("clans.id", ondelete="CASCADE"))
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
+    quantity = Column(Integer, default=1)
+    __table_args__ = (
+    Index('ix_unique_product_per_clan', 'clan_id', 'product_id', unique=True),
+    )
+
+
+    deposited_by = Column(Integer, ForeignKey("user.id", ondelete="SET NULL"))
+    deposited_at = Column(DateTime(timezone=True), default=func.now())
+
+    clan = relationship("Clan", back_populates="bank_items")
+
+class ClanXPLog(Base):
+    __tablename__ = "clan_xp_log"
+
+    id = Column(Integer, primary_key=True)
+    clan_id = Column(Integer, ForeignKey("clans.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="SET NULL"))
+    amount = Column(Integer, nullable=False)
+    reason = Column(String(100))  # например: "quest", "event", "shop", "donation"
+    timestamp = Column(DateTime(timezone=True), default=func.now())
+
+    clan = relationship("Clan")
+    user = relationship("User")
+
+class ClanMessage(Base):
+    __tablename__ = "clan_messages"
+
+    id = Column(Integer, primary_key=True)
+    clan_id = Column(Integer, ForeignKey("clans.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="SET NULL"))
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+
+    clan = relationship("Clan", backref="chat_messages")
+    user = relationship("User", backref="clan_chat_messages")
+
+class ClanChatMod(Base):
+    __tablename__ = "clan_chat_mods"
+
+    id = Column(Integer, primary_key=True)
+    clan_id = Column(Integer, ForeignKey("clans.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"))
+
+    assigned_at = Column(DateTime(timezone=True), default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("clan_id", "user_id", name="uq_clan_chatmod"),
+    )
+
+    clan = relationship("Clan", backref="chat_mods")
+    user = relationship("User", back_populates="clan_chat_moderator_of")
+
+
+class ClanMute(Base):
+    __tablename__ = "clan_mutes"
+
+    id = Column(Integer, primary_key=True)
+    clan_id = Column(Integer, ForeignKey("clans.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"))
+
+    muted_by = Column(Integer, ForeignKey("user.id", ondelete="SET NULL"))
+    reason = Column(String(200), nullable=True)
+    muted_until = Column(DateTime(timezone=True))
+
+    created_at = Column(DateTime(timezone=True), default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("clan_id", "user_id", name="uq_clan_mute"),
+    )
+
+    user = relationship("User", back_populates="muted_in_clans", foreign_keys=[user_id])
+
+
+
+
+
+
+
+
 
 
 

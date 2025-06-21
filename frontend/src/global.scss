@@ -1,60 +1,136 @@
-// global.scss
+// 🔮 Базовая глобаль
 
-// Контейнер уведомлений – переопределяем медиазапросы библиотеки
-.Vue-Toastification__container {
-    position: fixed !important;
-    top: 70px !important; // чуть ниже навбара
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    width: auto !important;
-    max-width: 600px !important;
-    z-index: 9999 !important;
-    padding: 0 !important;
-    margin: 0 auto !important;
-    text-align: center !important;
-  }
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  background: transparent;
+  font-family: 'JetBrains Mono', monospace;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   
-  // Полное переопределение стилей тоста
-  .Vue-Toastification__toast {
-    display: inline-block !important;
-    background-color: rgba(0, 0, 0, 0.85) !important;
-    color: #fff !important;
-    font-size: 1rem !important;
-    border-radius: 5px !important;
-    padding: 10px 15px !important;
-    margin: 10px !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-    word-wrap: break-word !important;
-    white-space: normal !important;
-    text-align: left !important;
-    max-width: 100% !important;
-    transition: opacity 0.5s ease !important;
-    transform: none !important;
-    animation: none !important;
+}
+
+// 🌌 Фон планеты Омениген
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url('/images/wastelandia5.jpg') no-repeat center;
+  background-size:102%;
+  background-attachment: fixed;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.90;
+  transition: opacity 0.4s ease;
+}
+
+// 🎯 Выделение текста (Ctrl+A, drag и т.п.)
+::selection {
+  background-color: rgba(53, 221, 221, 0.25);
+  color: #fff;
+}
+
+// 🌀 Скроллбар под стиль Омеги (WebKit)
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+// 💫 Анимация появления для всех страниц
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+// 🌿 Базовые переменные (если захочешь переменные SCSS)
+:root {
+  --font-main: 'JetBrains Mono', monospace;
+  --text-color: #fefefe;
+  --bg-dark: rgba(0, 0, 0, 0.85);
+  --accent: #9efeff;
+}
+
+/* UI: Кнопки-призраки */
+.ghost-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+  text-transform: uppercase;
+  transition: background 0.2s ease, transform 0.1s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
   }
-  
-  // Если где-то inline-стили задают translateX, принудительно убираем их
-  .Vue-Toastification__toast[style*="translateX"] {
-    transform: none !important;
+
+  &:active {
+    transform: scale(0.98);
   }
-  
-  // Определяем свои keyframes, которые меняют только opacity
-  @keyframes my-fade-enter {
-    from { opacity: 0; }
-    to { opacity: 1; }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
-  
-  @keyframes my-fade-leave {
-    from { opacity: 1; }
-    to { opacity: 0; }
-  }
-  
-  // Применяем наши keyframes для кастомного перехода "my-fade"
-  .my-fade-enter-active {
-    animation: my-fade-enter 0.5s forwards !important;
-  }
-  
-  .my-fade-leave-active {
-    animation: my-fade-leave 0.5s forwards !important;
-  }
+}
+
+/* UI: Тултипы (v-tooltip, popper.js, кастомные) */
+.tooltip {
+  max-width: 240px;
+  max-height: 150px;
+  overflow: auto;
+  white-space: normal;
+  word-break: break-word;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(20, 20, 20, 0.95);
+  color: #e7e7e7;
+  font-size: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  box-shadow: 0 0 8px rgba(0,0,0,0.4);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+  z-index: 9999;
+  animation: tooltip-fade-in 0.2s ease;
+}
+
+/* Расположение + смещения */
+.tooltip[data-popper-placement^='top']    { margin-bottom: 5px; }
+.tooltip[data-popper-placement^='bottom'] { margin-top:    5px; }
+.tooltip[data-popper-placement^='left']   { margin-right:  5px; }
+.tooltip[data-popper-placement^='right']  { margin-left:   5px; }
+
+/* Анимация появления */
+@keyframes tooltip-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-inner {
+  min-height: 100vh;
+  padding-bottom: 100px; /* для футера */
+  padding-top: 100px; /* для футера */
+}
   

@@ -1,16 +1,24 @@
-from datetime import datetime, date
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload
 from database import get_db
-from models.models import LandfillItem, InventoryItem, Product, User, LandfillPickupLimit, VipStatus
+from models.models import LandfillItem, InventoryItem, User, LandfillPickupLimit
 from auth.cookie_auth import get_current_user_from_cookie
 
 router = APIRouter(prefix="/api/landfill", tags=["landfill"])
 
+FIXED_LIMIT = 3  # 🔒 Жесткий лимит на подбор в день
+
+@router.get("")
 @router.get("/")
 async def view_landfill(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(LandfillItem).where(LandfillItem.quantity > 0))
+    result = await db.execute(
+        select(LandfillItem)
+        .where(LandfillItem.quantity > 0)
+        .options(joinedload(LandfillItem.product))
+    )
     items = result.scalars().all()
 
     return [
@@ -23,9 +31,9 @@ async def view_landfill(db: AsyncSession = Depends(get_db)):
             "rarity": item.product.rarity.value,
             "product_type": item.product.product_type.value,
             "thrown_at": item.thrown_at.isoformat(),
-        } for item in items
+        }
+        for item in items
     ]
-
 
 @router.post("/pickup/{landfill_id}")
 async def pickup_item(
@@ -35,18 +43,7 @@ async def pickup_item(
 ):
     today = date.today()
 
-    # 🌌 Определяем расу игрока
-    user_race = (user.race.name.lower() if user.race and user.race.name else "")
-
-# 📦 Определяем дневной лимит подбора на свалке
-    if user.vip_status in [VipStatus.CRYPTOVOID, VipStatus.NULLOVERLORD]:
-        daily_limit = 7  # 🛡️ VIP подписчики — элита среди мусорщиков
-    elif user_race == "наллвур":
-        daily_limit = 5  # 👁️ Наллвур умеют мимикрировать под гулей
-    else:
-        daily_limit = 3  # 🧍 Обычные смертные
-
-# 📅 Получаем счётчик на сегодня
+    # Проверка лимита подбора
     result = await db.execute(
         select(LandfillPickupLimit).where(
             LandfillPickupLimit.user_id == user.id,
@@ -54,40 +51,33 @@ async def pickup_item(
         )
     )
     limit = result.scalar()
+    used = limit.count if limit else 0
 
-# 🚫 Проверка превышения лимита
-    if limit and limit.count >= daily_limit:
-        if user.vip_status == VipStatus.NULLOVERLORD:
-            detail = "Вы уже унизили всех бомжей сегодня. Омега-бомжи покорно отступили."
-        elif user_race == "наллвур":
-            detail = "Гули тоже устают. Завтра снова можете прикинуться бомжом."
-        else:
-            detail = "Вы слишком часто шаритесь по свалке. Омега-бомжи вас заметили и дали леща. Попробуйте завтра."
+    if used >= FIXED_LIMIT:
+        raise HTTPException(status_code=429, detail="Вы уже подобрали максимум предметов сегодня. Возвращайтесь завтра!")
 
-        raise HTTPException(status_code=429, detail=detail)
-
-    result = await db.execute(select(LandfillItem).where(LandfillItem.id == landfill_id))
+    # Находим предмет
+    result = await db.execute(
+        select(LandfillItem)
+        .where(LandfillItem.id == landfill_id)
+        .options(joinedload(LandfillItem.product))
+    )
     item = result.scalar()
 
     if not item or item.quantity <= 0:
         raise HTTPException(status_code=404, detail="Этот предмет уже кто-то подобрал или он исчез.")
 
-    # Обновим инвентарь
-    result = await db.execute(select(InventoryItem).where(
-        InventoryItem.user_id == user.id,
-        InventoryItem.product_id == item.product_id
-    ))
-    inv_item = result.scalar()
+    # Кэшируем инфу до удаления
+    picked_quantity = item.quantity
+    picked_name = item.product.name
 
-    if inv_item:
-        inv_item.quantity += item.quantity
-    else:
-        db.add(InventoryItem(user_id=user.id, product_id=item.product_id, quantity=item.quantity))
+    # Добавляем как уникальную ячейку в инвентарь
+    db.add(InventoryItem(user_id=user.id, product_id=item.product_id, quantity=item.quantity))
 
     # Удаляем со свалки
     await db.delete(item)
 
-    # Обновим лимит
+    # Обновляем лимит
     if limit:
         limit.count += 1
     else:
@@ -95,6 +85,28 @@ async def pickup_item(
 
     await db.commit()
 
-    return {"message": f"Вы подобрали {item.quantity}x {item.product.name} со свалки!"}
+    return {"message": f"Вы подобрали {picked_quantity}x {picked_name} со свалки!"}
+
+@router.get("/limit")
+async def landfill_limit(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user_from_cookie)
+):
+    today = date.today()
+
+    result = await db.execute(
+        select(LandfillPickupLimit).where(
+            LandfillPickupLimit.user_id == user.id,
+            LandfillPickupLimit.date == today
+        )
+    )
+    limit = result.scalar()
+    current = limit.count if limit else 0
+
+    return {"used": current, "max": FIXED_LIMIT}
+
+
+
+
 
 

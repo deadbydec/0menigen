@@ -8,7 +8,7 @@ from database import get_db
 from datetime import datetime
 from sqlalchemy.orm import joinedload
 
-from models.models import PrivateMessage, User, SystemMessage
+from models.models import PrivateMessage, User, SystemMessage, SystemMessageType
 
 router = APIRouter()
 
@@ -148,21 +148,32 @@ async def delete_message(
     user: User = Depends(get_current_user_from_cookie),
     db: AsyncSession = Depends(get_db)
 ):
-    result = await db.execute(select(PrivateMessage).where(PrivateMessage.id == message_id))
+    # 1. Пробуем найти в PrivateMessage
+    result = await db.execute(
+        select(PrivateMessage).where(PrivateMessage.id == message_id)
+    )
     message = result.scalar()
 
-    if not message:
-        raise HTTPException(status_code=404, detail="Сообщение не найдено")
+    if message:
+        if message.recipient_id != user.id and message.sender_id != user.id:
+            raise HTTPException(status_code=403, detail="Нет прав для удаления этого сообщения.")
+        await db.delete(message)
+        await db.commit()
+        return JSONResponse(content={"success": "Приватное сообщение удалено!"})
 
-    # Проверяем, что текущий юзер — получатель или отправитель
-    if message.recipient_id != user.id and message.sender_id != user.id:
-        raise HTTPException(status_code=403, detail="Нет прав для удаления этого сообщения.")
-
-    await db.delete(message)
-    await db.commit()
-
-    return JSONResponse(
-        content={"success": "Сообщение удалено!"},
-        status_code=status.HTTP_200_OK
+    # 2. Пробуем найти в SystemMessage
+    result = await db.execute(
+        select(SystemMessage).where(SystemMessage.id == message_id, SystemMessage.recipient_id == user.id)
     )
+    sys_msg = result.scalar()
+
+    if sys_msg:
+        await db.delete(sys_msg)
+        await db.commit()
+        return JSONResponse(content={"success": "Системное сообщение удалено!"})
+
+    raise HTTPException(status_code=404, detail="Сообщение не найдено")
+
+
+
 

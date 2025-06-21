@@ -29,8 +29,8 @@ function switchComponent(component) {
 <template>
   <div class="auth-container">
     <div class="auth-card">
-      <h2 v-if="currentComponent === 'UserLogin'">Вход</h2>
-      <h2 v-else>Регистрация</h2>
+      <h1 v-if="currentComponent === 'UserLogin'">Вход</h1>
+      <h1 v-else>Регистрация</h1>
 
       <!-- 🔄 Переключаем компонент динамически -->
       <transition name="fade" mode="out-in">

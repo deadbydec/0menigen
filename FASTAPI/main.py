@@ -27,9 +27,9 @@ from utils.last_seen import set_user_online
 from fastapi_jwt import JwtAccessBearer, JwtAuthorizationCredentials
 from starlette.requests import Request
 from auth.cookie_auth import get_current_user_from_cookie, DebugCookieAuthMiddleware, AsyncCookieAuthMiddleware
-from routes import chat_router, admin_router
+from routes import chat_router
 from config import Config
-from utils.shoputils import shop_updater_loop
+from routes.shop import background_shop_updater
 
 app = FastAPI()
 
@@ -50,7 +50,6 @@ app.add_middleware(AsyncCookieAuthMiddleware)
 # 🛠️ Добавляем костыль для OPTIONS, чтобы избежать 400
 
 
-
 jwt_access = JwtAccessBearer(
     secret_key=settings.JWT_SECRET_KEY,
     access_expires_delta=settings.JWT_ACCESS_TOKEN_EXPIRES,
@@ -62,7 +61,7 @@ redis_client = Redis.from_url("redis://localhost", decode_responses=True)
 
 @app.on_event("startup")
 async def startup_event():
-    asyncio.create_task(shop_updater_loop())
+    asyncio.create_task(background_shop_updater())
 
     async with async_session() as db:
         result = await db.execute(select(TokenBlocklist))
@@ -106,7 +105,7 @@ async def root():
     return {"message": "FastAPI + Socket.IO работает!"}
 
 
-from routes import auth_router, pets_router, wardrobe_router, safe_router, verifyemail_router, playershop_router, landfill_router, donateshop_router, toilet_doom_router, gift_router, shop_router, news_router, index_router, player_router, players_router, inventory_router, games_router, profile_router, friends_router, inbox_router, wall_router, achievements_router, leaderboard_router, forum_router
+from routes import auth_router, adminarnia_router, pets_router, clans_router, wardrobe_router, npcquests_router, safe_router, verifyemail_router, playershop_router, landfill_router, donateshop_router, toilet_doom_router, gift_router, shop_router, news_router, index_router, player_router, players_router, inventory_router, games_router, profile_router, friends_router, inbox_router, wall_router, achievements_router, leaderboard_router, forum_router
 
 # Подключаем роутеры (аналог Flask Blueprint)
 app.include_router(index_router)
@@ -127,7 +126,6 @@ app.include_router(leaderboard_router, prefix="/api/leaderboard")
 app.include_router(player_router)
 app.include_router(gift_router)
 app.include_router(toilet_doom_router)
-app.include_router(admin_router)
 app.include_router(landfill_router)
 app.include_router(donateshop_router, prefix="/api/donateshop")
 app.include_router(playershop_router, prefix="/api/playershop")
@@ -135,6 +133,10 @@ app.include_router(safe_router, prefix="/api/safe")
 app.include_router(verifyemail_router)
 app.include_router(pets_router)
 app.include_router(wardrobe_router)
+app.include_router(npcquests_router)
+app.include_router(clans_router)
+
+app.include_router(adminarnia_router) #ебаная админарня
 
 from routes.socketio import socket_app
 

@@ -1,6 +1,7 @@
 // ✅ Убираем localStorage и достаём токен из куков
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/store/auth";
+import { h, resolveComponent } from "vue";
 
 // 📌 Функция для получения куки
 function getCookie(name) {
@@ -11,9 +12,14 @@ function getCookie(name) {
   );
   return matches ? decodeURIComponent(matches[1]) : undefined;
 }
+// 👇 Заглушка-обёртка: просто отдаёт <router-view />
+const AppWrapper = {
+  render() {
+    return h(resolveComponent("router-view"));
+  },
+};
 
 // 📌 Импортируем все компоненты
-import MainLayout from "@/components/layout/MainLayout.vue";
 import AuthLayout from "@/components/layout/AuthLayout.vue";
 import HomePage from "@/components/HomePage.vue";
 import UserAuth from "@/components/auth/UserAuth.vue";
@@ -21,7 +27,7 @@ import UserProfile from "@/components/profile/UserProfile.vue";
 import UserInventory from "@/components/UserInventory.vue";
 import NewsPage from "@/components/news/NewsPage.vue";
 import PlayersSearch from "@/components/PlayersSearch.vue";
-import ProfilePage from "@/components/profile/ProfilePage.vue";
+import ProfilePublic from "@/components/profile/public/ProfilePublic.vue";
 import MallPage from "@/components/mall/MallPage.vue";
 import ShopPage from "@/components/mall/ShopPage.vue";
 import NeonCircus from "@/components/games/NeonCircus.vue";
@@ -39,7 +45,11 @@ import UserSafe from '@/components/UserSafe.vue';
 import MyPets from '@/components/pets/MyPets.vue';
 import PetProfile from '@/components/pets/PetProfile.vue';
 import PetWardrobe from '@/components/PetWardrobe.vue';
-
+import VipShop from '@/components/vipshop/VipShop.vue';
+import QuestBoard from '@/components/events/quests/QuestBoard.vue';
+import NPCQuest from '@/components/events/quests/NPCQuest.vue';
+import Adminarnia from '@/components/admin/Adminarnia.vue';
+import ClansPage from '@/components/clans/ClansPage.vue';
 
 
 // 🔥 Определяем маршруты
@@ -52,15 +62,21 @@ const routes = [
     { path: "home", component: HomePage },
   ]
 },
-  {
-    path: "/",
-    component: MainLayout,
-    children: [
-      { path: "", redirect: "/home" },
+{
+  path: "/adminarnia",
+  name: "Adminarnia",
+  component: () => import("@/components/admin/Adminarnia.vue"),
+  meta: { requiresAuth: true }
+},
+{
+  path: "/",
+  component: AppWrapper,
+  children: [
+      { path: "/", redirect: "/home" },
       { path: "news", component: NewsPage, meta: { requiresAuth: true } },
       { path: "home", component: HomePage, meta: { requiresAuth: true } },     
       { path: "profile", component: UserProfile, meta: { requiresAuth: true } },
-      { path: "profile/:id", component: ProfilePage, meta: { requiresAuth: true } },
+      { path: "profile/:id", component: ProfilePublic, meta: { requiresAuth: true } },
       { path: "inventory", component: UserInventory, meta: { requiresAuth: true } },
       { path: "events", component: EventsPage, meta: { requiresAuth: true } },
       { path: '/landfill', component: LandfillPage, meta: { requiresAuth: true } },
@@ -68,8 +84,17 @@ const routes = [
       { path: '/voidgate', component: VoidGate, meta: { requiresAuth: true } },
       { path: "players", component: PlayersSearch, meta: { requiresAuth: true } },
 
+      { path: "/npc_quests", component: QuestBoard, meta: { requiresAuth: true } },
+       {
+    path: "/npc_quests/:npcId",
+    name: "npc-quest",
+    component: NPCQuest,
+    meta: { requiresAuth: true }
+  },
+      { path: '/clans', component: ClansPage, meta: { requiresAuth: true } },
+
       { path: '/mypets', component: MyPets, meta: { requiresAuth: true } },
-      {path: '/pet/:id', component: PetProfile, meta: { requiresAuth: true }, props: true },
+      { path: '/pet/:id', component: PetProfile, meta: { requiresAuth: true }, props: true },
       { path: "wardrobe", component: PetWardrobe, meta: { requiresAuth: true } },
 
       { path: "personalshop", component: PersonalShop, meta: { requiresAuth: true } },
@@ -78,6 +103,7 @@ const routes = [
       
       { path: "mall", component: MallPage, meta: { requiresAuth: true } },
       { path: "mall/:category", component: ShopPage, meta: { requiresAuth: true }, props: true },
+      { path: '/vip_shop', component: VipShop, meta: { requiresAuth: true } },
 
 
       { path: "games", component: NeonCircus, meta: { requiresAuth: true } },
@@ -90,21 +116,26 @@ const routes = [
       { path: "forum", component: OmegaForum, meta: { requiresAuth: true } },
       { path: "forum/:thread_id", component: ThreadView, meta: { requiresAuth: true } },
       { path: "origin", name: "origin", component: OriginPage, meta: { requiresAuth: true } },
-      {
-        path: '/admin',
-        name: 'AdminPanel',
-        component: () => import('@/components/admin/AdminUserPanel.vue') // путь может отличаться
-      },
-    ],
-  },
-  // Можно сделать 404:
-  { path: "/:pathMatch(.*)*", redirect: "/home" },
-];
+    ]
+  }
+]
+
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
-});
+  scrollBehavior(to, from, savedPosition) {
+    // ⬇️ вот оно — ключ к жизни
+    return { top: 0 }
+  }
+})
+
+
+
+router.afterEach(() => {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+})
+
 
 router.beforeEach(async (to, from, next) => {
   const auth = useAuthStore();

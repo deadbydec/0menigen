@@ -199,6 +199,21 @@ function buildLayersCustom(pet, layers = [], slotOrder = [], resolveItem) {
 }
 
 
+function getMiniAvatarLayersForPet(petId) {
+  const pet   = usePetsStore().myPets.find(p => p.id === petId)
+  const lays  = appearances[petId] || []
+  const order = getSlotOrderFor(petId)
+
+  const HEAD_SLOTS = [
+    'head', 'face', 'eyes', 'accessory', 'ears', 'skin', 'neck'
+  ]
+
+  // 💡 Всегда добавляем базовый слой
+  const filtered = lays.filter(l => l.slot === 'base' || HEAD_SLOTS.includes(l.slot))
+  return buildLayers(pet, filtered, order)
+}
+
+
   /* ───── public helpers for components ───── */
   function getLayersForPet(petId) {
     const pet   = usePetsStore().myPets.find(p => p.id === petId)
@@ -252,7 +267,8 @@ function buildLayersCustom(pet, layers = [], slotOrder = [], resolveItem) {
     resetSlotOrder,
     buildLayers,
     buildLayersCustom,
-    getRenderImage
+    getRenderImage,
+    getMiniAvatarLayersForPet
   }
 })
 

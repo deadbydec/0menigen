@@ -850,7 +850,7 @@ grid-auto-rows: 90px;
 .viewer__layer.layer-base       { z-index: 3 }
 .viewer__layer.layer-body       { z-index: 3 }
 .viewer__layer.layer-companion  { z-index: 3 }
-.viewer__layer.layer-foreground  { z-index: 4 }
+.viewer__layer.layer-foreground  { z-index: 3 }
 .viewer__layer.layer-paws       { z-index: 3 }
 .viewer__layer.layer-wings      { z-index: 3 }
 .viewer__layer.layer-eyes       { z-index: 3 }
@@ -859,6 +859,7 @@ grid-auto-rows: 90px;
 .viewer__layer.layer-accessory  { z-index: 3 }
 .viewer__layer.layer-face       { z-index: 3 }
 .viewer__layer.layer-skin       { z-index: 3 }
+.viewer__layer.layer-dye       { z-index: 3 }
 
 
 // ───────── Carousel ───────── //

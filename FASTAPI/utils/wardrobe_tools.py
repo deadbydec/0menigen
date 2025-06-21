@@ -5,6 +5,92 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from fastapi import HTTPException
+from models.models import PetRenderConfig, Pet  # не забудь импорт
+from constants.wardrobe import AVATAR_SLOTS
+
+
+async def build_avatar_layers(
+    pet_id: int,
+    db: AsyncSession,
+    avatar_mode: bool = False,
+    race_code: str = ""
+) -> list[dict]:
+
+    config: PetRenderConfig | None = await db.get(PetRenderConfig, pet_id)
+    pet: Pet | None = await db.get(Pet, pet_id)
+
+    if not config or not isinstance(config.slot_order, list) or not pet:
+        return []
+
+    inventory_ids = [
+        layer["rid"]
+        for layer in config.slot_order
+        if isinstance(layer, dict) and "rid" in layer and layer["rid"] not in (None, -1)
+    ]
+
+    result = await db.execute(
+        select(UserPetWardrobeItem)
+        .options(joinedload(UserPetWardrobeItem.product))
+        .where(UserPetWardrobeItem.id.in_(inventory_ids))
+    )
+    wardrobe_map = {item.id: item for item in result.scalars().all()}
+
+    layers = []
+
+    # 🐾 Базовый слой питомца — всегда строго z=3
+    if pet.image:
+        layers.append({
+            "src": f"https://localhost:5002/static/{pet.image}",
+            "z": 3,
+            "slot": "base"
+        })
+
+    for layer in config.slot_order:
+        rid = layer.get("rid")
+        slot = layer.get("slot")
+
+        if rid in (None, -1) or not slot:
+            continue
+
+        if avatar_mode and slot not in AVATAR_SLOTS:
+            continue
+
+        wrd = wardrobe_map.get(rid)
+        if not wrd or not wrd.product:
+            continue
+
+        prod = wrd.product
+        custom = prod.custom
+
+        if isinstance(custom, str):
+            try:
+                custom = json.loads(custom)
+            except json.JSONDecodeError:
+                custom = {}
+
+        src = None
+        render_variants = custom.get("render_variants", {})
+        variant = render_variants.get(race_code)
+
+        if isinstance(variant, str):
+            src = f"https://localhost:5002/static/cosmetic/{variant}"
+        elif f"{slot}_image" in custom:
+            src = f"https://localhost:5002/static/{custom[f'{slot}_image']}"
+        elif "image" in custom:
+            src = f"https://localhost:5002/static/cosmetic/{custom['image']}"
+        elif prod.image:
+            src = f"https://localhost:5002/static/goods/{prod.image}"
+
+        if src:
+            layers.append({
+                "src": src,
+                "z": custom.get("z", 100),
+                "slot": slot
+            })
+
+    return sorted(layers, key=lambda l: l["z"])
+
+
 
 from utils.slot_utils import get_enum_slot
 from models.models import (
@@ -21,7 +107,7 @@ async def detect_slot(product: Product) -> WardrobeSlot:
         "background": "фон", "aura": "окружение", "companion": "спутник",
         "body": "тело", "paws": "лапы", "wings": "крылья",
         "eyes": "глаза", "head": "голова", "tail": "хвост",
-        "accessory": "аксессуар", "face": "морда", "skin": "покров", "foreground":"передний план"
+        "accessory": "аксессуар", "face": "морда", "skin": "покров", "foreground":"передний план", "dye":"эссенция"
     }
 
     try:
@@ -105,55 +191,46 @@ async def move_to_wardrobe(           # ← только ОДИН экземпл
 
 # ────────────────────────────────────────────
 async def move_from_wardrobe(
-    db: AsyncSession, user, product_id: int, qty: int = 1
+    db: AsyncSession,
+    user,
+    wardrobe_id: int
 ) -> None:
     """
-    Возвращает `qty` экземпляров косметики из гардероба → инвентарь.
-    Вызывается роутом  POST /wardrobe/remove, который шлёт product_id + quantity.
+    Возвращает один конкретный экземпляр из гардероба в инвентарь.
     """
-    if qty < 1:
-        raise HTTPException(400, "quantity ≥ 1")
-
     entry: UserPetWardrobeItem | None = (
         await db.execute(
-            select(UserPetWardrobeItem).where(
-                UserPetWardrobeItem.user_id == user.id,
-                UserPetWardrobeItem.product_id == product_id,
-            )
+            select(UserPetWardrobeItem)
+            .options(joinedload(UserPetWardrobeItem.product))
+            .where(UserPetWardrobeItem.id == wardrobe_id, UserPetWardrobeItem.user_id == user.id)
         )
     ).scalar_one_or_none()
 
-    if not entry or entry.quantity < qty:
-        raise HTTPException(400, "Недостаточно предметов в гардеробе")
+    if not entry:
+        raise HTTPException(404, "Предмет не найден в гардеробе")
 
-    # — инвентарь —
-    inv_item: InventoryItem | None = (
+    product = entry.product
+    if not product:
+        raise HTTPException(500, "У гардеробного предмета нет Product")
+
+    # 📥 Перемещаем в инвентарь
+    existing: InventoryItem | None = (
         await db.execute(
-            select(InventoryItem).where(
-                InventoryItem.user_id == user.id,
-                InventoryItem.product_id == product_id,
-            )
+            select(InventoryItem)
+            .where(InventoryItem.user_id == user.id, InventoryItem.product_id == product.id)
         )
     ).scalar_one_or_none()
 
-    if inv_item:
-        inv_item.quantity += qty
+    if existing:
+        existing.quantity += 1
     else:
-        db.add(
-            InventoryItem(
-                user_id=user.id,
-                product_id=product_id,
-                quantity=qty,
-            )
-        )
+        db.add(InventoryItem(user_id=user.id, product_id=product.id, quantity=1))
 
-    # — гардероб —
-    entry.quantity -= qty
-    if entry.quantity == 0:
-        await db.delete(entry)
-
+    await db.delete(entry)
     await db.commit()
-    print(f"[WARDROBE] {entry.product.name} ← {qty} шт. обратно в инвентарь")
+
+    print(f"[WARDROBE] -1 «{product.name}» (wardrobe_id={wardrobe_id}) → инвентарь")
+
 
 
 # ────────────────────────────────────────────
@@ -219,45 +296,6 @@ async def serialize_wardrobe(
     return out
 
 # ────────────────────────────────────────────
-async def build_avatar_layers(pet, db: AsyncSession) -> list[dict]:
-    """
-    Строит слои рендера для мини-аватара (pet.avatar_layers), на основе appearance.
-    Используется для карточек питомцев.
-    """
-
-    inventory_ids = [l["inventory_id"] for l in pet.appearance_layers]
-    order = pet.slot_order or []
-
-    result = await db.execute(
-        select(InventoryItem)
-        .options(joinedload(InventoryItem.product))
-        .where(InventoryItem.id.in_(inventory_ids))
-    )
-    inventory_map = {item.id: item for item in result.scalars().all()}
-
-    STATIC_URL = "https://localhost:5002/static/goods"  # ❗️или подставь переменную окружения
-
-    layers = []
-    for iid in order:
-        inv = inventory_map.get(iid)
-        if not inv or not inv.product:
-            continue
-
-        prod = inv.product
-        custom = prod.custom
-        if isinstance(custom, str):
-            try:
-                custom = json.loads(custom)
-            except json.JSONDecodeError:
-                custom = {}
-
-        layers.append({
-            "src": f"{STATIC_URL}/{prod.image}",
-            "z": custom.get("z", 0),
-            "slot": custom.get("slot", "unknown")
-        })
-
-    return layers
 
 
 
