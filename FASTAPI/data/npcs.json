@@ -1,0 +1,205 @@
+[{
+  "id": "npc_pani_crispi",
+  "name": "Пани Криспи",
+  "avatar": "pani_crispi.png",
+  "quote": "Принеси мне что-нибудь вкусное... или я съем тебя.",
+  "limit_per_day": 5,
+  "categories": ["food", "drink", "sweet"],
+  "rarity_pool": {
+    "trash": 60,
+    "common": 30,
+    "rare": 10
+  },
+  "task_details": {
+    "avoid_duplicates_per_day": true,
+    "only_existing_items": true
+  },
+  "reward_on_success": {
+    "xp": {
+      "min": 350,
+      "max": 500
+    },
+    "coins": {
+      "min": 150,
+      "max": 300
+    },
+    "special_food_chance": 0.2
+  },
+  "flavor_lines": [
+    "Оу, снова ты? Я уж думала, ты сгнил.",
+    "У меня пять желудков. Каждый хочет что-то мерзкое. Начнём?",
+    "Интересный выбор… надеюсь, не испортит мне кишечную симфонию.",
+    "Быстрее. Если я начну есть себя — день испорчен.",
+    "Мой желудок — это меню. А ты — шеф."
+  ],
+  "rejection_conditions": {
+    "glitched_items_rejected": true,
+    "glitched_comment": "Фу. Цифровая плесень. Я жру органику, а не иллюзии."
+  }
+}
+,
+{
+  "id": "npc_kiir_eritr",
+  "name": "Киир Эритр",
+  "avatar": "kiir_eritr.png",
+  "quote": "Ты видел, как я смотрю на тебя. Теперь принеси то, чего не должно существовать.",
+  "limit_per_day": 5,
+  "categories": ["impossible"],
+  "rarity_pool": {},
+  "mechanic": "fake_item",
+  "task_details": {
+    "fake_name_pool": [
+      "Влажная Клятва Бутылки",
+      "Десерт Наблюдателя",
+      "Обратная Соль",
+      "Фантомная Точка",
+      "Рецепт Признания Ошибки"
+    ],
+    "task_behavior": "Задание невозможно выполнить. Предмет не существует в products.json."
+  },
+  "reward_on_fail": {
+    "xp": 666,
+    "coins": 333,
+    "special_item_chance": 0.13
+  },
+  "post_fail_message": "Ты понял. Всё правильно. Возьми это и молчи.",
+  "flavor_lines": [
+    "Я слышал, как ты хрустишь глазами.",
+    "Это имя пришло ко мне во сне. Найди его или замолчи навсегда.",
+    "Твои ошибки пахнут корицей. Принеси их мне.",
+    "Ты уже проиграл. Я просто ждал этого момента.",
+    "Нет предмета. Только ты и я. И это — уже много."
+  ]
+},
+{
+  "id": "npc_ikarus",
+  "name": "Дед Икарус",
+  "avatar": "npc_ikarus.png",
+  "quote": "Я не алкаш. Я — временный контейнер для спиртовой ауры.",
+  "limit_per_day": 5,
+  "categories": ["drink"],
+  "rarity_pool": {
+    "common": 50,
+    "rare": 50
+  },
+  "task_details": {
+    "allow_duplicates": false,
+    "only_existing_items": true
+  },
+  "reward_on_success": {
+    "xp": {
+      "min": 500,
+      "max": 777
+    },
+    "coins": {
+      "min": 200,
+      "max": 500
+    },
+    "chance_special_drink": 0.3
+  },
+  "flavor_lines": [
+    "Сынок, мне нужно кое-что, чтобы утро стало вчерашним…",
+    "Видишь? Я дрожу от жажды. И от истины.",
+    "Где мой стакан? А, не важно. Прямо в душу лей.",
+    "Если это вода — неси обратно. Я ещё трезвый, и это опасно.",
+    "Мне снился ты… и банка светлого пойла. И я не знаю, что это значит.",
+    "Я не пью. Это моя жена во мне пьёт. Ну и соседи. Все мы вместе."
+  ],
+  "rejection_conditions": {
+    "glitched_items_rejected": true,
+    "glitched_comment": "Ну ты и скотина… Ладно, выпью."
+  }
+},
+{
+  "id": "glim_mycel",
+  "name": "Глим-Мицел",
+  "avatar": "glim_mycel.png",
+  "quote": "Мы не я. Я не мы. Принеси то, что кормит и ломает.",
+  "limit_per_day": 5,
+  "categories": ["food","drug"],
+  "rarity_pool": {
+    "trash": 25,
+    "frequent": 35,
+    "common": 25,
+    "rare": 15
+  },
+  "reward_on_success": {
+    "xp": { "min": 300, "max": 600 },
+    "coins": { "min": 150, "max": 300 },
+    "special_drug_chance": 0.25,
+    "special_food_chance": 0.15
+  },
+  "flavor_lines": [
+    "Ты принёс только часть. Мы хотим целое.",
+    "Пища — для тела. Аптека — для ошибки.",
+    "Мы настаиваемся внутри тебя.",
+    "Ешь и лечись, чтобы мы могли собраться.",
+    "Два желудка, один разум. Дай оба входа."
+  ]
+},
+{
+  "id": "npc_yatorakuga",
+  "name": "Яторакуга-сан",
+  "avatar": "yatorakuga.png",
+  "quote": "Я ору не потому что злюсь, а потому что БЫСТРЕЕ НЕ ПОЛУЧАЕТСЯ.",
+  "limit_per_day": 3,
+  "categories": ["drug", "toy", "toilet", "gadget"],
+  "rarity_pool": {
+    "trash": 20,
+    "common": 30,
+    "rare": 35,
+    "epic": 10,
+    "legendary": 5
+  },
+  "task_details": {
+    "allow_duplicates": false,
+    "only_existing_items": true
+  },
+  "reward_on_success": {
+    "xp": {
+      "min": 500,
+      "max": 1000
+    },
+    "coins": {
+      "min": 666,
+      "max": 9999
+    },
+    "bonus_item_chance": 0.25,
+    "bonus_item_pool": [
+      "Слеза Хаоса",
+      "Аспиринчик++",
+      "Респираторный Хряк"
+    ]
+  },
+  "flavor_lines": [
+    "ЯТОРАКУГА НЕ ЖДЁТ! ЯТОРАКУГА ВЖИВЛЯЕТ!",
+    "Ты принёс это? Или ты — ничто?",
+    "Я ел баги на завтрак. Они не хрустели.",
+    "Реальность? Это мой 15-й бой за сегодня.",
+    "Принеси предмет. Любой. Но если он будет тухлым... ТЫ БУДЕШЬ ТУХЛЫМ."
+  ],
+  "rejection_conditions": {
+    "glitched_items_rejected": true,
+    "glitched_comment": "Это? Это не баг. Это ПОЗОР."
+  },
+  "active": true
+},
+{
+  "id": "npc_zyryaka",
+  "name": "Зыряка из Ямы",
+  "avatar": "zyryaka_bum.png",
+  "quote": "Реальность гниёт снизу. Я просто перерабатываю её запах.",
+  "limit_per_day": 1,
+  "dynamic_trash_target": true,
+  "rarity_pool": {
+    "trash": 100
+  },
+  "custom": {
+    "recyclist": true,
+    "reward_curve": "quantity_based_luck",
+    "target_rarity": "trash"
+  },
+  "active": true
+}
+
+]
