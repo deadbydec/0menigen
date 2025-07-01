@@ -41,6 +41,7 @@ const rankHovering = ref(false)
 const petsHovering = ref(false)
 const wardrobeHovering = ref(false)
 const clansHovering = ref(false)
+const tradeHovering = ref(false)
 
 function goTo(path) {
   router.push(path)
@@ -176,6 +177,20 @@ import logoIcon from "@/assets/LOGO.png"; // второй кристалл
   </div>
 </li>
 
+<li class="profile-dropdown" @mouseenter="tradeHovering = true" @mouseleave="tradeHovering = false">
+  <button class="p-2 text-white hover:text-purple-300 transition">
+    <font-awesome-icon :icon="['fas', 'fa-scale-balanced']" />
+  </button>
+
+  <!-- ВЫПАДАЮЩЕЕ МЕНЮ -->
+  <div v-if="tradeHovering" class="dropdown-menu">
+    <ul>
+      <li @click="goTo('/auctions')">Аукционы</li>
+      <li @click="goTo('/trades')">Пункт обмена</li>
+    </ul>
+  </div>
+</li>
+
 <li class="profile-dropdown" @mouseenter="rankHovering = true" @mouseleave="rankHovering = false">
   <button class="p-2 text-white hover:text-purple-300 transition">
     <font-awesome-icon :icon="['fas', 'trophy']" />
@@ -243,16 +258,16 @@ import logoIcon from "@/assets/LOGO.png"; // второй кристалл
   .logo-icon {
     position: fixed;
     margin-left: -930px;
-    margin-top:10px;
-  width: 9.5em;
-  height: 3.0em;
+    margin-top:5px;
+  width: 11.5em;
+  height: 4.0em;
   vertical-align: -0.2em;
   margin-right: 4px;
   display: inline-block;
 }
 
   header {
-    background:linear-gradient(50deg, rgb(24, 24, 24), rgb(2, 85, 81),rgb(5, 235, 196));
+    background:linear-gradient(90deg, rgba(14, 224, 214, 0.116), rgba(24, 24, 24, 0.904),  rgba(24, 24, 24, 0.904),rgba(5, 235, 197, 0.13));
     color: white;
     border: 1px solid #d1d1d1cc;
     padding: 5px 0;
@@ -265,7 +280,7 @@ import logoIcon from "@/assets/LOGO.png"; // второй кристалл
   }
   
   header {
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 6px rgba(0.2, 0.2, 0.2, 0.2);
   }
   
   footer {

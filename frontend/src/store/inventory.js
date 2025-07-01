@@ -11,6 +11,10 @@ export const useInventoryStore = defineStore('inventory', () => {
   const selectedItem  = ref(null)
   const toastStore    = useToastStore()
 
+  const tradableItems = computed(() =>
+  inventory.value.filter(i => !i.is_equipped && !i.locked && !i.in_safe && !i.in_trade)
+)
+
   /* ── helpers ───────────────────────────────────────────── */
   function getCookie (name) {
     const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
@@ -152,6 +156,15 @@ export const useInventoryStore = defineStore('inventory', () => {
     }
   }
 
+  async function useBookOnPet(petId, productId) {
+  const res = await api.post(`/pets/${petId}/use_book`, {
+    product_id: productId
+  }, { withCredentials: true })
+
+  return res.data
+}
+
+
   /* ▸ SELECT / TOGGLE */
   function selectItem (item) {
     // если пришёл null → просто очистить
@@ -164,10 +177,11 @@ export const useInventoryStore = defineStore('inventory', () => {
 
   /* ── expose ────────────────────────────────────────────── */
   return {
+    useBookOnPet,
     inventory,
     userRace,
     selectedItem,
-
+    tradableItems,
     fetchInventory,
     useItem,
     incubateItem,

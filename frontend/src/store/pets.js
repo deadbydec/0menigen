@@ -9,6 +9,7 @@ export const usePetsStore = defineStore('pets', () => {
   const currentPet   = ref(null)
   const isLoadingAll = ref(false)
   const isLoadingOne = ref(false)
+  const speciesMap    = ref({})   // 🧬 тут будут виды питомцев
 
   async function fetchAllPets () {
     isLoadingAll.value = true
@@ -77,14 +78,19 @@ async function tameCompanion (petId, product_id) {
   }
 }
 
+async function fetchSpeciesMeta () {
+  const res = await api.get('/pets/pet_species')  // <-- JSON: { mossback: {...}, ... }
+  speciesMap.value = res.data
+}
+
 
   return {
     myPets,
+    fetchSpeciesMeta,
     removeCompanion,
     currentPet,
     isLoadingAll,
     isLoadingOne,
-
     fetchAllPets,
     fetchPetById,
     clearCurrentPet,

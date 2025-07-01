@@ -27,6 +27,16 @@ export const usePlayerStore = defineStore("player", () => {
     }
   }
 
+  // 🧃 тихий запрос баланса и состояния игрока (без тостов и ивентов)
+  async function fetchMe() {
+    try {
+      const res = await api.get("/player/")
+      player.value = res.data
+    } catch (err) {
+      console.error("❌ Ошибка тихого обновления игрока:", err)
+    }
+  }
+
   function resetPlayer() {
     player.value = null
   }
@@ -35,9 +45,11 @@ export const usePlayerStore = defineStore("player", () => {
     player,
     xpPercent,
     fetchPlayer,
+    fetchMe,     // 💥 вот сюда экспортируем
     resetPlayer,
   }
 })
+
 
 
 

@@ -15,9 +15,7 @@ from config import Settings, settings
 from database import get_db
 from utils.confirm_email import send_confirmation_email
 
-
 jwt_access = JwtAccessBearer(secret_key="supersecretkey", auto_error=True)
-
 
 router = APIRouter()
 
@@ -27,7 +25,6 @@ async def validation_exception_handler(request, exc):
         status_code=422,
         content={"detail": exc.errors()},
     )
-
 
 async def some_dependency(local_kw: str = Query("ru")):
     return local_kw
@@ -166,8 +163,6 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     )
 
     return response
-
-
 
 # ✅ Логаут (ревокация токена)
 @router.post("/logout")

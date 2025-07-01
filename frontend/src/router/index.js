@@ -50,7 +50,7 @@ import QuestBoard from '@/components/events/quests/QuestBoard.vue';
 import NPCQuest from '@/components/events/quests/NPCQuest.vue';
 import Adminarnia from '@/components/admin/Adminarnia.vue';
 import ClansPage from '@/components/clans/ClansPage.vue';
-
+import AuctionsPage from '@/components/trade/AuctionsPage.vue';
 
 // 🔥 Определяем маршруты
 const routes = [
@@ -83,7 +83,6 @@ const routes = [
       { path: '/blackmarket', component: BlackMarket, meta: { requiresAuth: true } },
       { path: '/voidgate', component: VoidGate, meta: { requiresAuth: true } },
       { path: "players", component: PlayersSearch, meta: { requiresAuth: true } },
-
       { path: "/npc_quests", component: QuestBoard, meta: { requiresAuth: true } },
        {
     path: "/npc_quests/:npcId",
@@ -92,20 +91,16 @@ const routes = [
     meta: { requiresAuth: true }
   },
       { path: '/clans', component: ClansPage, meta: { requiresAuth: true } },
-
       { path: '/mypets', component: MyPets, meta: { requiresAuth: true } },
       { path: '/pet/:id', component: PetProfile, meta: { requiresAuth: true }, props: true },
       { path: "wardrobe", component: PetWardrobe, meta: { requiresAuth: true } },
-
       { path: "personalshop", component: PersonalShop, meta: { requiresAuth: true } },
       { path: "shopsearch", component: ShopSearch, meta: { requiresAuth: true } },
       { path: "safe", component: UserSafe, meta: { requiresAuth: true } },
-      
       { path: "mall", component: MallPage, meta: { requiresAuth: true } },
       { path: "mall/:category", component: ShopPage, meta: { requiresAuth: true }, props: true },
       { path: '/vip_shop', component: VipShop, meta: { requiresAuth: true } },
-
-
+      { path: '/auctions', component: AuctionsPage, meta: { requiresAuth: true } },
       { path: "games", component: NeonCircus, meta: { requiresAuth: true } },
       {
         path: '/games/match3',
@@ -120,7 +115,6 @@ const routes = [
   }
 ]
 
-
 const router = createRouter({
   history: createWebHistory(),
   routes,
@@ -130,12 +124,9 @@ const router = createRouter({
   }
 })
 
-
-
 router.afterEach(() => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 })
-
 
 router.beforeEach(async (to, from, next) => {
   const auth = useAuthStore();
@@ -144,7 +135,6 @@ router.beforeEach(async (to, from, next) => {
   if (to.meta.requiresAuth && !auth.isAuthenticated) return next("/login");
   next();
 });
-
 
 export default router;
 

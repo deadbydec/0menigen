@@ -62,8 +62,8 @@ const canCreateClan = computed(() => {
   padding-left: 1.2em;
 }
 .create-btn {
-  background:linear-gradient(50deg, rgb(24, 24, 24), rgb(2, 85, 81),rgb(5, 235, 196));
-  color: rgb(37, 36, 36);
+  background:linear-gradient(20deg, rgb(5, 73, 70), rgb(13, 211, 211));
+  color: rgb(219, 219, 219);
   padding: 0.6em 1.2em;
   margin-left: 180px;
   width: 180px;

@@ -5,12 +5,17 @@ from sqlalchemy import delete
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from utils.wardrobe_tools import build_avatar_layers
+from utils.books import get_detailed_read_books, apply_book_to_pet
+
 import logging
 
 from database import get_db
 from models.models import Pet, PetAppearance, PetRenderConfig, Product, UserPetWardrobeItem, InventoryItem, VaultItem
 from auth.cookie_auth import get_current_user_from_cookie
 from utils.slot_utils import get_enum_slot
+
+from fastapi.responses import JSONResponse
+from utils.species_loader import load_all_pet_species  # ← твой готовый утиль
 
 router = APIRouter(prefix="/api/pets", tags=["pets"])
 logger = logging.getLogger(__name__)
@@ -55,7 +60,13 @@ async def get_public_pets(user_id: int, db: AsyncSession = Depends(get_db)):
 
     return out
 
-
+@router.get("/pet_species")
+async def get_all_pet_species():
+    """
+    Возвращает список всех видов питомцев с метаданными.
+    Формат: [{ species_code: { name, race_code, ... } }, ...]
+    """
+    return JSONResponse(content=load_all_pet_species())
 
 @router.get("/{pet_id}", summary="Информация о питомце")
 async def get_pet(pet_id: int, user=Depends(get_current_user_from_cookie), db: AsyncSession = Depends(get_db)):
@@ -162,14 +173,29 @@ async def save_appearance(
     return {"success": True}
 
 
+from utils.species_loader import load_all_pet_species
+
 async def pet_to_dict(pet: Pet, db: AsyncSession) -> dict:
-    
+    species_data = load_all_pet_species()
+    species_meta = species_data.get(pet.species_code, {})
+
+    # 🎯 Локализация trait (если в БД остался англ.)
+    trait_en = pet.trait
+    trait_pool_en = species_meta.get("trait_pool_en", [])
+    trait_pool_ru = species_meta.get("trait_pool", [])
+
+    try:
+        index = trait_pool_en.index(trait_en)
+        localized_trait = trait_pool_ru[index] if index < len(trait_pool_ru) else trait_en
+    except ValueError:
+        localized_trait = trait_en
+
     return {
         "id": pet.id,
         "name": pet.name,
         "race_code": pet.race_code,
         "image": pet.image,
-        "trait": pet.trait,
+        "trait": localized_trait,  # 👈 теперь уже по-русски
         "level": pet.level,
         "intelligence": pet.intelligence,
         "fullness": pet.fullness,
@@ -182,17 +208,27 @@ async def pet_to_dict(pet: Pet, db: AsyncSession) -> dict:
         "created_at": pet.created_at.isoformat() if pet.created_at else None,
         "last_update": pet.last_update.isoformat() if pet.last_update else None,
         "avatar_layers": await build_avatar_layers(pet.id, db, avatar_mode=True, race_code=pet.race_code),
-        # ✅ Новое
         "biography": pet.biography,
+
+        "species": {
+            "code": pet.species_code,
+            "name": species_meta.get("species_name"),
+            "emoji": species_meta.get("emoji"),
+            "race_name": species_meta.get("race_name"),
+            "description": species_meta.get("description"),
+            "trait": species_meta.get("trait_pool")
+        },
+
         "favorite_items": pet.favorite_items or [],
+        "read_books": pet.read_books or [],  # 👈 вот это добавили
         "companion": {
             "product_id": pet.companion_id,
             "name": pet.companion_name,
             "image": pet.companion_image,
             "description": pet.companion_description,
         } if pet.companion_id else None
-
     }
+
 
 class BioEdit(BaseModel):
     biography: str
@@ -304,6 +340,43 @@ async def set_favorite_items(pet_id: int, payload: FavoriteItemsPayload, db: Asy
     return {"success": True, "count": len(filtered)}
 
 
+class UseBookPayload(BaseModel):
+    product_id: int
+
+@router.get("/{pet_id}/read_books", summary="Прочитанные книги питомца с подробностями")
+async def get_pet_read_books(
+    pet_id: int,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user_from_cookie)
+):
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден или не твой")
+
+    books = await get_detailed_read_books(pet, db)
+    return {"read_books": books}
+
+
+@router.post("/{pet_id}/use_book")
+async def use_book_on_pet(
+    pet_id: int,
+    payload: UseBookPayload,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user_from_cookie)
+):
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден или не твой")
+
+    result = await apply_book_to_pet(pet, user.id, payload.product_id, db)
+    await db.commit()
+
+    return {
+        "success": True,
+        **result
+    }
+
+
 @router.post("/{pet_id}/companion/remove", summary="Убрать спутника у питомца")
 async def remove_companion(
     pet_id: int,
@@ -333,5 +406,8 @@ async def remove_companion(
 
     await db.commit()
     return {"success": True}
+
+
+
 
 

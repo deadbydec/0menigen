@@ -2,7 +2,19 @@
   <div v-if="player && !['/profile', '/wardrobe'].includes($route.path)" class="player-info">
     <div class="content">
       <!-- Аватар с кольцом -->
+     <div class="header-block">
+        <div class="username">
+          {{ player.name || 'Омежка' }}
+          
+          <span v-if="player.vip_subscription" class="vip-icon" :title="player.vip_subscription.label"><img :src="crownIcon" alt="" class="crown-icon" /></span>
+          
+        </div>
+        <div class="title" :class="roleColor">{{ titleToShow }}</div>
+        </div>
+     
+     <div class="body-block">
       <div class="avatar-container">
+        <div class="avatar-wrapper">
         <svg :class="['xp-ring', { 'vip-ring': !!player.vip_subscription }]" viewBox="0 0 140 140">
           <defs>
             <linearGradient id="xp-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -23,26 +35,18 @@
         </svg>
         <img :src="computedAvatar" alt="Avatar" class="avatar" />
       </div>
-
+</div>
       <!-- Инфа справа -->
       <div class="info">
-        <div class="username">
-          {{ player.name || 'Омежка' }}
-          
-          <span v-if="player.vip_subscription" class="vip-icon" :title="player.vip_subscription.label">✨</span>
-          
-        </div>
-        <div class="title" :class="roleColor">{{ titleToShow }}</div>
-        <div class="race">{{ player.race?.display_name || "Неизвестно" }}</div>
-        
-        <div class="money"><img :src="coinIcon" alt="💎" class="emoji-icon" /> {{ player.coins || 0 }}</div>
-        <div class="money"><img :src="nullingIcon" alt="💎" class="emoji-icon" /> {{ (player.nullings ?? 0).toFixed(1) }}</div>
-        <div class="money"><img :src="specialIcon" alt="💎" class="emoji-icon" /> {{ player.specialk || 0 }}</div>
+        <div class="money"><img :src="coinIcon" alt="💎" class="coin-icon" /> {{ player.coins || 0 }}</div>
+        <div class="money"><img :src="nullingIcon" alt="💎" class="nulling-icon" /> {{ (player.nullings ?? 0).toFixed(1) }}</div>
+        <div class="money"><img :src="specialIcon" alt="💎" class="key-icon" /> {{ player.specialk || 0 }}</div>
+        <div class="money"><img :src="luckIcon" alt="💎" class="clover-icon" /> {{ player.luck || 0 }}</div>
         <div class="level">Уровень: {{ player.level }}</div>
         <div class="xp">({{ player.xp }}/{{ player.nextLevelXp }})</div>
       </div>
-    
     </div>
+  </div>
   </div>
 </template>
 
@@ -67,6 +71,8 @@ const xpPercent = computed(() => {
 import nullingIcon from "@/assets/icons/nulling1.png"; // второй кристалл
 import coinIcon from "@/assets/icons/coin.png";
 import specialIcon from "@/assets/icons/specialk.png";
+import luckIcon from "@/assets/icons/clover.png";
+import crownIcon from "@/assets/icons/crown.png";
 const xpOffset = computed(() => {
   return circumference - (circumference * xpPercent.value) / 100;
 });
@@ -130,60 +136,122 @@ onMounted(() => {
   
 <style lang="scss" scoped>
 
-.emoji-icon {
-  width: 1.6em;
-  height: 1.6em;
-  vertical-align: -0.2em;
+.content {
+  display: flex;
+  flex-direction: column; /* 🆘 вот оно! */
+  align-items: center;     /* центрируем всё по ширине */
+  gap: 10px;
+  height: 100%;
+}
+
+.body-block {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  padding-top: 5px;
+  gap: 0;
+  align-items: center;
+}
+
+.info {
+  align-items: center;
+  margin-left: 75px;
+  margin-bottom: -20px;
+  
+}
+
+.header-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.username {
+  font-size: 25px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 500;
+  margin-top: 0px;
+}
+
+.crown-icon {
+  width: 2.8em;
+  height: 2.7em;
+  vertical-align: -1.5em;
+  margin-right: 0px;
+}
+
+.key-icon {
+  width: 1.9em;
+  height: 1.8em;
+  vertical-align: -0.5em;
+  margin-right: 3px;
+  display: inline-block;
+  
+}
+
+.nulling-icon {
+  width: 1.8em;
+  height: 1.9em;
+  vertical-align: -0.5em;
   margin-right: 4px;
   display: inline-block;
 }
 
+.clover-icon {
+  width: 2.5em;
+  height: 2.5em;
+  vertical-align: -0.9em;
+  margin-right: 4px;
+  display: inline-block;
+}
+
+.coin-icon {
+  width: 1.6em;
+  height: 1.6em;
+  vertical-align: -0.5em;
+  margin-right: 4px;
+  display: inline-block;
+}
 
 .player-info {
   position: fixed;
   top: 120px;
+  flex-direction: column;
   right: 50px;
-  width: 320px;
-  height: 250px;
+  width: 300px;
+  height: 300px;
   background: #181818e7;
   border-radius: 18px;
   border: 1px solid #d1d1d1cc;
   padding: 15px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
   font-family: 'JetBrains Mono', monospace;
   z-index: 1000;
-}
-
-.content {
-  position: fixed;
-  display: flex;
-  flex-direction: row;
-  align-items:center;
-  justify-content: flex-start;
-  gap: 80px;
+  
 }
 
 .avatar-container {
   position: relative;
   width: 80px;
   height: 120px;
+  margin-left: 20px;
 }
 
-.xp-ring {
-  position: absolute;
-  top: -26px;
-  left: -26px;
-  width: 161px;
-  height: 161px;
-  transform: rotate(-90deg) scale(0.79);
-  transform-origin: center;
-  z-index: 2;
-}
 
 .xp-ring .bg {
   fill: none;
   stroke: rgba(48, 40, 53, 0.644);
   stroke-width: 8;
+  
 }
 .xp-ring .fg {
   fill: none;
@@ -213,53 +281,10 @@ onMounted(() => {
   z-index: 1;
 }
 
-.info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  flex: 100;
-  color: #fff;
-  font-size: 18px;
-  min-width: 2;
-}
-
-.username {
-  font-size: 24px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.money,
-.level {
-  margin-top: 9px;
-}
-
-
-.race {
-  font-size: 15px;
-  font-weight: 100;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.title {
-  font-size: 15px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.level {
-  font-size: 18px;
-}
 
 /* 🎩 РОЛИ */
 .admin-role {
-  color: #ff5555; /* админ — как баг */
+  color: #ec3414ea; /* админ — как баг */
 }
 .moderator-role {
   color: #ffaa00; /* жёлтый как знак "внимание" */
@@ -288,19 +313,16 @@ onMounted(() => {
 
 
 .vip-icon {
-  margin-left: 6px;
-  font-size: 1.2rem;
-  color: gold;
-  filter: drop-shadow(0 0 6px #ffdf70);
-  text-shadow: 0 0 6px #ffe448c9;
-  vertical-align: middle;
+  color: rgb(97, 32, 158);
+  filter: drop-shadow(0 0 9px #8f06ffe5);
+  text-shadow: 0 0 6px #8918e6c9;
   animation: sparkle 1s infinite ease-in-out;
 }
 
 .vip-ring .fg {
-  stroke: gold !important;
-  filter: drop-shadow(0 0 6px #ffdf70);
-  animation: sparkle 3s infinite ease-in-out;
+  stroke: rgb(255, 210, 11) !important;
+  filter: drop-shadow(0 8 2px #8f06ffe5);
+  animation: sparkle 2s infinite ease-in-out;
 }
 
 @keyframes sparkle {

@@ -7,7 +7,7 @@
             :src="game.image"
             alt="game preview"
             class="game-image"
-            @click="goToGame(game.route)"
+            @click="openGame(game)"
           />
           <div class="game-info">
             <h3>{{ game.name }}</h3>
@@ -17,19 +17,36 @@
       </div>
     </div>
   </div>
+  <GameModal
+  v-if="showModal"
+  :gameComponent="currentGameComponent"
+ @close="showModal = false"
+/>
+
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
+import Match3Game from '@/components/games/Match3Game.vue'
+import GameModal from '@/components/games/GameModal.vue' // сам компонент создашь ниже
 
+const showModal = ref(false)
+const currentGameComponent = ref(null)
+
+function openGame(game) {
+  if (game.id === 1) {
+    currentGameComponent.value = markRaw(Match3Game)
+  }
+  showModal.value = true
+}
 const router = useRouter()
 
 const games = ref([
   {
     id: 1,
-    name: 'Три в ряд',
-    description: 'Собери баги в ряд и получи нуллинги. Осторожно: может затянуть.',
+    name: 'Баги в ряд',
+    description: 'Собери баги в ряд и заработай немного монет. Осторожно: может затянуть.',
     image: '/static/images/match3.png',
     route: '/games/match3'
   },
@@ -49,6 +66,7 @@ function goToGame(route) {
 
 <style scoped>
 .neon-circus {
+  margin-top: 100px;
   padding: 30px 10px;
   min-height: 90vh;
   display: flex;
@@ -80,8 +98,8 @@ function goToGame(route) {
 }
 
 .game-card {
-  background: rgba(0, 0, 0, 0.596);
-  border: 2px solid #000000bd;
+  background: #181818e7;
+  border: 1px solid rgb(196, 196, 196);
   border-radius: 16px;
   padding: 16px;
   display: flex;

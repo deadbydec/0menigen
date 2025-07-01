@@ -50,9 +50,9 @@ onMounted(async () => {
 <style>
 .pets-block {
   max-width: 600px;
-
   gap: 10px;
-  height: 190px;
+  min-height: 280px;
+  max-height: 700px;
   max-width: 588px;
   backdrop-filter: blur(7px);
   background: rgba(38, 32, 39, 0.48);

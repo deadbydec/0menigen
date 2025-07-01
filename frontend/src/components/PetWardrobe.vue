@@ -1,164 +1,11 @@
-<template>
-  <div v-if="selectedPet" class="pw">
-    <h1 class="pw__title">ГАРДЕРОБ</h1>
-
-    <div class="pw__layout">
-      <!-- ─────────── ЛЕВАЯ ПАНЕЛЬ ─────────── -->
-      <section class="panel panel--left">
-        <div class="panel__slot-bar">
-          <button @click="prevSlot" class="nav-btn">
-            <i class="fa fa-chevron-left" />
-          </button>
-          <span class="slot-label">{{ activeSlotLabel }}</span>
-          <button @click="nextSlot" class="nav-btn">
-            <i class="fa fa-chevron-right" />
-          </button>
-        </div>
-
-        <div class="panel__grid" :key="renderKey">
-  <div
-    v-for="item in slotItems"
-    :key="`${item.wardrobe_id}_${item.instance ?? 0}`"
-    :class="[
-      'grid-item',
-      {
-        'grid-item--used': isEquippedGlobally(item.wardrobe_id, item.instance ?? 0),
-        'grid-item--active': isEquippedHere(item.wardrobe_id, item.instance ?? 0)
-      }
-    ]"
-    @click="isWithdrawMode ? withdrawItem(item) : toggleEquip(item)"
-  >
-    <img
-      :src="resolveItemImage(item)"
-      :alt="item.name"
-      :class="[
-        'grid-item__img',
-        { 'grid-item__img--active': isEquippedHere(item.wardrobe_id, item.instance ?? 0) }
-      ]"
-    />
-  </div>
-</div>
-
-
-        <div class="panel__footer">
-          <button
-  class="action-btn"
-  :class="{ 'action-btn--active': isWithdrawMode }"
-  @click="toggleWithdrawMode"
->
-
-  ВЫВЕСТИ В ИНВЕНТАРЬ
-</button>
-<button
-  class="action-btn"
-  :class="{ 'action-btn--active': showAllWardrobeItems }"
-  @click="toggleShowAll"
->
-  ПОКАЗАТЬ ВСЕ
-</button>
-
-        </div>
-      </section>
-
-      <!-- ─────────── ЦЕНТР ─────────── -->
-      <section class="panel panel--center">
-        <h2 class="viewer__name">{{ selectedPet.name }}</h2>
-
-        <div class="viewer">
-          <template v-for="layer in renderedLayers" :key="`${layer.slot}_${layer.rid ?? layer.pid}_${layer.instance ?? 0}`">
-            <img
-              :src="layer.src"
-              :class="['viewer__layer', 'layer-' + layer.slot]"
-            />
-          </template>
-        </div>
-
-        <div class="carousel">
-          <button @click="prevPet" class="nav-btn">
-            <i class="fa fa-chevron-left" />
-          </button>
-          <div class="carousel__strip">
-            <div
-              v-for="p in petsStore.myPets"
-              :key="p.id"
-              :class="['carousel__thumb', { 'carousel__thumb--active': selectedPet.id === p.id }]"
-              @click="selectPet(p)"
-            >
-              <img :src="getPetImage(p)" alt="pet avatar" />
-            </div>
-          </div>
-          <button @click="nextPet" class="nav-btn">
-            <i class="fa fa-chevron-right" />
-          </button>
-        </div>
-      </section>
-
-      <!-- ─────────── ПРАВАЯ ПАНЕЛЬ ─────────── -->
-      <section class="panel panel--right">
-        <h2 class="equipped-title">Слои</h2>
-
-        <div class="equipped-list">
-          <div
-            v-for="lay in renderedLayers"
-            :key="`${lay.slot}_${lay.rid ?? lay.pid}_${lay.instance ?? 0}`"
-            class="equipped-item"
-            @mouseenter="hoveredSlot = `${lay.slot}_${lay.rid ?? lay.pid}_${lay.instance ?? 0}`"
-            @mouseleave="hoveredSlot = null"
-          >
-            <div class="equipped-row">
-              <button
-                v-if="hoveredSlot === `${lay.slot}_${lay.rid ?? lay.pid}_${lay.instance ?? 0}` && lay.pid !== -1"
-                class="slot-remove-btn"
-                @click="removeLayer(lay)"
-                title="Снять предмет"
-              >
-                ❌
-              </button>
-              <span class="equipped-item__name">
-  {{ getItemName(lay.pid) || '—' }}
-</span>
-
-              <div
-                v-if="hoveredSlot === `${lay.slot}_${lay.rid ?? lay.pid}_${lay.instance ?? 0}`"
-                class="equipped-item__arrows"
-              >
-                <button @click="moveItemUp(lay.rid, lay.instance)" class="nav-btn arrow-btn">
-                  <i class="fa fa-chevron-up" />
-                </button>
-                <button @click="moveItemDown(lay.rid, lay.instance)" class="nav-btn arrow-btn">
-                  <i class="fa fa-chevron-down" />
-                </button>
-              </div>
-            </div>
-            <div class="equipped-divider" />
-          </div>
-        </div>
-
-        <div class="equipped-actions">
-          <button class="action-btn" @click="saveChanges">СОХРАНИТЬ</button>
-          <button class="action-btn" @click="clearAll">СНЯТЬ ВСЕ</button>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <div v-else class="pw__loading">Загрузка питомца…</div>
-</template>
-
-
-
-
-
 <script setup>
 import { ref, reactive, computed, onMounted, watchEffect, defineExpose } from 'vue'
 import api from '@/utils/axios'
 import { useRoute } from 'vue-router'
-
 import { usePetsStore } from '@/store/pets'
 import { useWardrobeStore } from '@/store/wardrobe'
 import { useToastStore } from '@/store/toast'
 import { usePetRenderStore } from '@/store/petRender'
-
 const STATIC = import.meta.env.VITE_STATIC_URL || 'https://localhost:5002'
 const petsStore = usePetsStore()
 const wardrobeStore = useWardrobeStore()
@@ -168,12 +15,38 @@ const route = useRoute()
 const isWithdrawMode = ref(false)
 const showAllWardrobeItems = ref(false)
 const renderKey = ref(0)
+const selectedPet = ref(null)
+const initialAppearance = reactive({})
+const previewAppearance = reactive({})
+const selectedCard = ref(null)
+const hoveredSlot = ref(null)
+const activeSlotIndex = ref(0)
+const slotOrder = ref([])
+const activeSlot = computed(() => slots[activeSlotIndex.value])
+const activeSlotLabel = computed(() => slotLabels[activeSlot.value])
+const DIR_STATIC  = import.meta.env.VITE_STATIC_URL + '/static'
+const DIR_COSMO   = DIR_STATIC + '/cosmetic'
+const DIR_GOODS   = DIR_STATIC + '/goods'
+
+const isEquippedGlobally = (rid, inst = 0) => Object.values(renderStore.appearances).some(layers => layers?.some(l => (l.rid ?? -999) === rid && (l.instance ?? 0) === inst))
+const isEquippedHere = (rid, inst = 0) => appearanceLayers.value?.some(l => (l.rid ?? -999) === rid && (l.instance ?? 0) === inst)
+
+/* ────────── UI nav ────────── */
+const prevSlot =()=>{ activeSlotIndex.value=(activeSlotIndex.value-1+slots.length)%slots.length; selectedCard.value=null }
+const nextSlot =()=>{ activeSlotIndex.value=(activeSlotIndex.value+1)%slots.length; selectedCard.value=null }
+
+const selectedCategory = ref('all')
+const showCategoryList = ref(false)
+
+
+function selectCategory(category) {
+  selectedCategory.value = category
+}
 
 
 function toggleShowAll() {
   showAllWardrobeItems.value = !showAllWardrobeItems.value
 }
-
 
 const slots = ['background','foreground','aura','companion','body','paws','wings','eyes','head','tail','accessory','face','skin','dye']
 const slotLabels = {
@@ -191,27 +64,11 @@ const EN_TO_RU = {
   accessory: 'аксессуар', face: 'морда', skin: 'покров', foreground:'передний план', dye:'эссенция'
 }
 
-
-const selectedPet = ref(null)
-const initialAppearance = reactive({})
-const previewAppearance = reactive({})
-const selectedCard = ref(null)
-const hoveredSlot = ref(null)
-const activeSlotIndex = ref(0)
-const slotOrder = ref([])
-
-const activeSlot = computed(() => slots[activeSlotIndex.value])
-const activeSlotLabel = computed(() => slotLabels[activeSlot.value])
-
-const DIR_STATIC  = import.meta.env.VITE_STATIC_URL + '/static'
-const DIR_COSMO   = DIR_STATIC + '/cosmetic'
-const DIR_GOODS   = DIR_STATIC + '/goods'
-
 async function withdrawItem(item) {
   isWithdrawMode.value = false
   try {
     await wardrobeStore.removeFromWardrobe(item.wardrobe_id)
-    removeLayer(item) // снимаем визуально и из store
+    removeLayer(item)
     toast.addToast('Предмет выведен в инвентарь', { type: 'success' })
   } catch {
     toast.addToast('Ошибка при выводе предмета', { type: 'error' })
@@ -252,27 +109,30 @@ function toggleWithdrawMode() {
   }
 }
 
-
-/* ► слои с нормализованными src для рендера */
 const renderedLayers = computed(()=>{
   if(!selectedPet.value) return []
   return renderStore.getLayersFromPreview(selectedPet.value, previewAppearance, slotOrder.value)
 })
 
-/* ► предметы активного слота */
 const slotItems = computed(() => {
-  let items = showAllWardrobeItems.value
-    ? wardrobeStore.items
-    : wardrobeStore.items.filter(it => it.slot === EN_TO_RU[activeSlot.value])
+  let items = wardrobeStore.items
+
+  if (!showAllWardrobeItems.value) {
+    if (selectedCategory.value === 'all') {
+      items = wardrobeStore.items
+    } else {
+      const slot = EN_TO_RU[selectedCategory.value] || selectedCategory.value
+      items = wardrobeStore.items.filter(it => it.slot?.toLowerCase() === slot)
+    }
+  }
 
   return [...items].sort((a, b) => b.wardrobe_id - a.wardrobe_id)
 })
 
 
-
-
 const getPetImage = p =>
   p?.image?.startsWith('http') ? p.image : `${STATIC}/static/${p?.image||''}`
+
 defineExpose({ getPetImage })
 
 const getItemName = pid=>{
@@ -281,17 +141,10 @@ const getItemName = pid=>{
   return it?.name || '—'
 }
 
-/* ────────── equipment checks ────────── */
-function matched(a,b){                           // helper: rid приоритетен, иначе pid
+function matched(a,b){
   if(a.rid != null && b.rid != null) return a.rid === b.rid && (a.instance??0)===(b.instance??0)
   return a.pid === b.pid && (a.instance??0)===(b.instance??0)
 }
-const isEquippedGlobally = (rid, inst = 0) => Object.values(renderStore.appearances).some(layers => layers?.some(l => (l.rid ?? -999) === rid && (l.instance ?? 0) === inst))
-const isEquippedHere = (rid, inst = 0) => appearanceLayers.value?.some(l => (l.rid ?? -999) === rid && (l.instance ?? 0) === inst)
-
-/* ────────── UI nav ────────── */
-const prevSlot =()=>{ activeSlotIndex.value=(activeSlotIndex.value-1+slots.length)%slots.length; selectedCard.value=null }
-const nextSlot =()=>{ activeSlotIndex.value=(activeSlotIndex.value+1)%slots.length; selectedCard.value=null }
 
 function prevPet(){
   const arr=petsStore.myPets, i=arr.findIndex(p=>p.id===selectedPet.value.id)
@@ -302,22 +155,19 @@ function nextPet(){
   selectPet(arr[(i+1)%arr.length])
 }
 
-/* ────────── equip / unequip ────────── */
 function toggleEquip(it){
   const rid = it.wardrobe_id, pid = it.product_id
   const inst = it.instance ?? 0
   const slot = SLOT_RU2EN[it.slot?.toLowerCase()] || it.slot
 
-
   const idx = appearanceLayers.value.findIndex(l=>matched(l,{rid,pid,instance:inst}))
-  if(idx!==-1){                                  // снять
+  if(idx!==-1){
     appearanceLayers.value.splice(idx,1)
     slotOrder.value = slotOrder.value.filter(l=>!matched(l,{rid,pid,instance:inst}))
     previewAppearance[slot] = (previewAppearance[slot]||[]).filter(l=>!matched(l,{rid,pid,instance:inst}))
     selectedCard.value=null
     return
   }
-  // надеть
   const layer = { rid, pid, slot, instance:inst }
   appearanceLayers.value.push(layer)
   slotOrder.value.push(layer)
@@ -333,7 +183,6 @@ function removeLayer(lay) {
   renderStore.setCustomSlotOrder(selectedPet.value.id, slotOrder.value)
 }
 
-
 function moveItemUp(rid, instance = 0) {
   const i = slotOrder.value.findIndex(
     p => (p.rid ?? -999) === rid && (p.instance ?? 0) === instance
@@ -346,7 +195,6 @@ function moveItemUp(rid, instance = 0) {
   }
 }
 
-
 function moveItemDown(rid, instance = 0) {
   const i = slotOrder.value.findIndex(
     p => (p.rid ?? -999) === rid && (p.instance ?? 0) === instance
@@ -358,21 +206,18 @@ function moveItemDown(rid, instance = 0) {
   }
 }
 
-/* ────────── bulk ops ────────── */
 function clearAll(){
   Object.keys(previewAppearance).forEach(k=>{ if(k!=='base') previewAppearance[k]=[] })
-  slotOrder.value          = [{ rid:-1,pid:-1,instance:0, slot: 'base' }]
-  appearanceLayers.value   = appearanceLayers.value.filter(l=>l.pid===-1)
-  selectedCard.value=null
+  slotOrder.value = [{ rid:-1,pid:-1,instance:0, slot: 'base' }]
+  appearanceLayers.value = appearanceLayers.value.filter(l=>l.pid===-1)
+  selectedCard.value = null
 }
 
-/* ────────── API helpers ────────── */
 async function loadAppearance() {
   if (!selectedPet.value) return
   try {
     const { data } = await api.get(`/pets/${selectedPet.value.id}/appearance`)
 
-    // 🔄 Очищаем
     Object.keys(previewAppearance).forEach(k => delete previewAppearance[k])
     appearanceLayers.value = []
 
@@ -380,7 +225,6 @@ async function loadAppearance() {
 
     for (const [slot, arr] of Object.entries(data.appearance || {})) {
       const lays = Array.isArray(arr) ? arr : [arr]
-
       for (const l of lays) {
         const layer = {
           pid: typeof l.pid === 'object' ? l.pid?.pid ?? -1 : l.pid ?? -1,
@@ -393,7 +237,6 @@ async function loadAppearance() {
       }
     }
 
-    // 🐾 добавляем base, если не было
     const hasBase = layers.some(l => l.slot === 'base' && l.pid === -1)
     if (!hasBase) {
       const petLayer = { pid: -1, rid: -1, slot: 'base', instance: 0 }
@@ -410,7 +253,6 @@ async function loadAppearance() {
   }
 }
 
-
 async function moveBackToInventory() {
   if (!selectedCard.value) return
   try {
@@ -426,7 +268,6 @@ function extractPid(layer) {
   return layer?.pid ?? layer?.product_id ?? null
 }
 
-// ⬇️ нормализуем slot_order (уникальность по ключу `${pid}:${rid}:${slot}:${instance}`)
 const seen = new Set()
 const order = []
 
@@ -443,7 +284,6 @@ for (const o of slotOrder.value) {
   }
 }
 
-
 async function saveChanges() {
   if (!selectedPet.value) return
 
@@ -458,7 +298,6 @@ async function saveChanges() {
     }))
   }
 
-  // 🐾 slot_order по факту = slotOrder.value
   const order = slotOrder.value.map(l => ({
     pid: typeof l.pid === 'object' ? l.pid?.pid ?? -1 : l.pid ?? -1,
     rid: l.rid ?? null,
@@ -466,7 +305,6 @@ async function saveChanges() {
     slot: l.slot === 'pet' ? 'base' : l.slot,
   }))
 
-  // 🐾 гарантируем наличие базы
   const hasBase = order.some(o => o.slot === 'base' && o.pid === -1)
   if (selectedPet.value?.image && !hasBase) {
     appearance.base = appearance.base ?? []
@@ -490,11 +328,6 @@ async function saveChanges() {
   }
 }
 
-
-
-
-
-/* ────────── pet select / init ────────── */
 function selectPet(p){ if(p){ selectedPet.value=p; loadAppearance() } }
 
 onMounted(async ()=>{
@@ -508,37 +341,221 @@ watchEffect(()=>{
     selectPet(petsStore.myPets[0]||null)
   }
 })
+
+watch(selectedCategory, () => {
+  showCategoryList.value = false
+})
+
 </script>
+
+<template>
+  <div v-if="selectedPet" class="pw">
+    <div class="wrap">
+      <div class="pw__layout">
+        <!-- ─────────── ЛЕВАЯ ПАНЕЛЬ ─────────── -->
+        <section class="panel panel--left" style="position: relative;">
+          <div class="panel__slot-bar">
+            <button class="nav-btn" @click="showCategoryList = !showCategoryList">
+              <h3 class="h-label">КАТЕГОРИИ</h3>
+            </button>
+          </div>
+
+          <!-- Категории или грид — не вместе -->
+          <div class="category-list" v-show="showCategoryList">
+  <button @click="selectCategory('all')">Все</button>
+  <button
+    v-for="(label, key) in slotLabels"
+    :key="key"
+    @click="selectCategory(key)"
+  >
+    {{ label }}
+  </button>
+</div>
+
+<div class="panel__grid" v-show="!showCategoryList" :key="renderKey">
+  <div
+    v-for="item in slotItems"
+    :key="`${item.wardrobe_id}_${item.instance ?? 0}`"
+    :class="[
+      'grid-item',
+      {
+        'grid-item--used': isEquippedGlobally(item.wardrobe_id, item.instance ?? 0),
+        'grid-item--active': isEquippedHere(item.wardrobe_id, item.instance ?? 0)
+      }
+    ]"
+    @click="isWithdrawMode ? withdrawItem(item) : toggleEquip(item)"
+  >
+    <img
+      :src="resolveItemImage(item)"
+      :alt="item.name"
+      :class="[
+        'grid-item__img',
+        { 'grid-item__img--active': isEquippedHere(item.wardrobe_id, item.instance ?? 0) }
+      ]"
+    />
+  </div>
+</div>
+
+          <div class="panel__footer">
+            <button
+              class="action-btn"
+              :class="{ 'action-btn--active': isWithdrawMode }"
+              @click="toggleWithdrawMode"
+            >
+              Вывести
+            </button>
+
+          </div>
+        </section>
+
+        <!-- ─────────── ЦЕНТР ─────────── -->
+        <section class="panel panel--center">
+          <h2 class="viewer__name">{{ selectedPet.name }}</h2>
+
+          <div class="viewer">
+            <template
+              v-for="layer in renderedLayers"
+              :key="`${layer.slot}_${layer.rid ?? layer.pid}_${layer.instance ?? 0}`"
+            >
+              <img
+                :src="layer.src"
+                :class="['viewer__layer', 'layer-' + layer.slot]"
+              />
+            </template>
+          </div>
+
+          <div class="carousel">
+            <button @click="prevPet" class="nav-btn">
+              <i class="fa fa-chevron-left" />
+            </button>
+            <div class="carousel__strip">
+              <div
+                v-for="p in petsStore.myPets"
+                :key="p.id"
+                :class="['carousel__thumb', { 'carousel__thumb--active': selectedPet.id === p.id }]"
+                @click="selectPet(p)"
+              >
+                <img :src="getPetImage(p)" alt="pet avatar" />
+              </div>
+            </div>
+            <button @click="nextPet" class="nav-btn">
+              <i class="fa fa-chevron-right" />
+            </button>
+          </div>
+        </section>
+
+        <!-- ─────────── ПРАВАЯ ПАНЕЛЬ ─────────── -->
+        <section class="panel panel--right">
+          
+          <div class="header">
+          <h2 class="h-label">СЛОИ</h2>
+</div>
+          <div class="equipped-list">
+            <div
+              v-for="lay in renderedLayers"
+              :key="`${lay.slot}_${lay.rid ?? lay.pid}_${lay.instance ?? 0}`"
+              class="equipped-item"
+              @mouseenter="hoveredSlot = `${lay.slot}_${lay.rid ?? lay.pid}_${lay.instance ?? 0}`"
+              @mouseleave="hoveredSlot = null"
+            >
+              <div class="equipped-row">
+                <button
+                  v-if="hoveredSlot === `${lay.slot}_${lay.rid ?? lay.pid}_${lay.instance ?? 0}` && lay.pid !== -1"
+                  class="slot-remove-btn"
+                  @click="removeLayer(lay)"
+                  title="Снять предмет"
+                >
+                  ❌
+                </button>
+                <span class="equipped-item__name">
+                  {{ getItemName(lay.pid) || '—' }}
+                </span>
+
+                <div
+                  v-if="hoveredSlot === `${lay.slot}_${lay.rid ?? lay.pid}_${lay.instance ?? 0}`"
+                  class="equipped-item__arrows"
+                >
+                  <button @click="moveItemUp(lay.rid, lay.instance)" class="nav-btn arrow-btn">
+                    <i class="fa fa-chevron-up" />
+                  </button>
+                  <button @click="moveItemDown(lay.rid, lay.instance)" class="nav-btn arrow-btn">
+                    <i class="fa fa-chevron-down" />
+                  </button>
+                </div>
+              </div>
+              <div class="equipped-divider" />
+            </div>
+          </div>
+
+          <div class="equipped-actions">
+            <button class="action-btn" @click="saveChanges">Сохранить</button>
+            <button class="action-btn" @click="clearAll">Раздеть</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div v-else class="pw__loading">Загрузка питомца…</div>
+</template>
 
 
 <style lang="scss" scoped>
 // ───────── Base fonts & vars ───────── //
-$glass-bg:rgba(38, 32, 39, 0.13);
+$glass-bg:#181818e7;
 $glass-border: 1px solid #000;
 $glass-hover: rgba(255, 255, 255, 0.08);
 $accent: #d6dcdda6;
 
+.category-list {
+  margin-top: 2px;
+  padding: 0.30rem 0.5rem;
+  height: 530.2px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+
+  display: flex;
+  flex-direction: column;
+
+  button {
+    background: none;
+    border: none;
+    color: white;
+    text-align: left;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(255,255,255,0.08);
+    }
+  }
+}
+
+.wrap {
+  margin-top: 120px;
+  position: relative;
+  font-family: 'JetBrains Mono', monospace;
+  
+}
+
 .action-btn--active {
-  border: 3px solid #00000081;
+  border: 1px solid rgb(196, 196, 196);
   background-color: rgba(255, 0, 85, 0.1);
   box-shadow: 0 0 5px #0000009d;
   transition: all 0.2s ease;
 }
 
 .panel__grid {
-  
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-grid-auto-rows: 90px;
   grid-template-columns: repeat(auto-fill, 70px);
   grid-auto-rows: 90px;
   gap: 5px;
   padding: .5rem;
   justify-content: center; // 💡 чтобы центрировать при малом количестве
   align-content: start;
+  min-height: 520px; // <== добавь это
 }
-
-
 
 .grid-item {
   display: flex;
@@ -547,8 +564,6 @@ grid-auto-rows: 90px;
   width: 100%;
   height: 100%;
 }
-
-
 
 .grid-item--used {
   opacity: 0.3;
@@ -564,10 +579,12 @@ grid-auto-rows: 90px;
 
 // ───────── Equipped list (Right Panel) ───────── //
 .equipped-title {
+  font-family: 'JetBrains Mono', monospace;
   text-align: center;
-  padding: .25rem 0;
-  border-bottom: 1px solid $glass-border;
-  font-size: .85rem;
+  padding: .25rem 2;
+  border-bottom: 1px solid rgb(196, 196, 196);
+  font-size: .95rem;
+  border: 1px solid rgb(196, 196, 196);
 }
 
 .equipped-list {
@@ -595,6 +612,7 @@ grid-auto-rows: 90px;
 
 .equipped-row {
   display: flex;
+  font-family: 'JetBrains Mono', monospace;
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
@@ -651,7 +669,7 @@ grid-auto-rows: 90px;
   display: flex;
   gap: .5rem;
   padding: .5rem;
-  border-top: 1px solid $glass-border;
+  border-top: 1px solid rgb(196, 196, 196);
 }
 
 // ───────── Layout ───────── //
@@ -669,7 +687,8 @@ grid-auto-rows: 90px;
   &__title {
     text-align: center;
     font-size: 1.5rem;
-    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
     margin-bottom: .5rem;
   }
 
@@ -689,20 +708,43 @@ grid-auto-rows: 90px;
   }
 }
 
+
+.header {
+    align-items: center;
+    justify-content: center; // ✅ теперь контент будет по центру
+    padding: 0.12rem .30rem;
+    border-bottom: 1px solid rgb(196, 196, 196);
+    margin-top: 16px;
+    margin-bottom: 2px;
+    font-size: 13px;
+    font-style:italic;
+
+.h-label {
+      font-size: 19px;
+      letter-spacing: 0.11rem;
+  }
+}
+
 // ───────── Glass panels ───────── //
 .panel {
   background: $glass-bg;
-  border: 1px solid $glass-border;
-  backdrop-filter: blur(8px);
-  border-radius: 12px;
+  border: 1px solid rgb(196, 196, 196);
+  border-radius: 22px;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 520px; // ❗ или ту, которую даёт panel__grid
+      font-size: .75rem;
+      text-transform: uppercase;
+
+    
 
   &--left {
     width: 25%;
+    padding-top: 3px;
     min-width: 220px;
+    min-height: 520px; // ❗ или ту, которую даёт panel__grid
   }
 
   &--center {
@@ -718,9 +760,9 @@ grid-auto-rows: 90px;
   &__slot-bar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center; // ✅ теперь контент будет по центру
     padding: .25rem .5rem;
-    border-bottom: 1px solid $glass-border;
+    border-bottom: 1px solid rgb(196, 196, 196);
 
     .slot-label {
       font-size: .75rem;
@@ -734,7 +776,6 @@ grid-auto-rows: 90px;
     padding: .75rem;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-
     gap: .75rem;
     overflow-y: auto;
     max-height: 520px;
@@ -742,7 +783,7 @@ grid-auto-rows: 90px;
 
   &__footer {
     padding: .5rem;
-    border-top: 1px solid $glass-border;
+    border-top: 1px solid rgb(196, 196, 196);
   }
 }
 
@@ -750,25 +791,22 @@ grid-auto-rows: 90px;
 .nav-btn {
   width: 32px;
   height: 32px;
-  font-size: 1rem;
+  font-size: 0.9rem;
+  margin-bottom: 3px;
+  font-style:italic;
   background: transparent;
   color: white;
   border: none;
-  border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
-
-  &:hover {
-    background: $glass-hover;
-  }
 }
 
 .arrow-btn {
-  width: 24px;
-  height: 24px;
+  width: 25px;
+  height: 25px;
   font-size: 0.85rem;
   background: transparent;
   border: none;
@@ -787,8 +825,7 @@ grid-auto-rows: 90px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
   padding: .35rem .5rem;
-  font-size: .7rem;
-  text-transform: uppercase;
+  font-size: .8rem;
   letter-spacing: .05rem;
   cursor: pointer;
   flex: 1;
@@ -823,13 +860,14 @@ grid-auto-rows: 90px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.40);
+  
   z-index: 5;
 
   &__layer {
     position: absolute;
     inset: 0;
     margin: auto;
+    margin-top: 5px;
     max-height: 100%;
     object-fit: contain;
   }
@@ -837,7 +875,7 @@ grid-auto-rows: 90px;
 
 .viewer__name {
   text-align: center;
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   font-weight: 600;
   color: white;
   margin-bottom: 0.5rem;
@@ -866,7 +904,7 @@ grid-auto-rows: 90px;
 .carousel {
   display: flex;
   align-items: center;
-  gap: .5rem;
+  gap: 0.5rem;
   margin-top: 1rem;
   justify-content: center;
 
@@ -874,7 +912,7 @@ grid-auto-rows: 90px;
     display: flex;
     gap: .5rem;
     overflow-x: auto;
-    max-width: 240px;
+    max-width: 350px;
     padding: 0 .25rem;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -891,7 +929,7 @@ grid-auto-rows: 90px;
     overflow: hidden;
     background-color: rgba(255, 255, 255, 0.05);
     border: 2px solid transparent;
-    flex-shrink: 0;
+    flex-shrink: 1;
     cursor: pointer;
     transition: border-color .2s;
     display: flex;
@@ -903,8 +941,8 @@ grid-auto-rows: 90px;
     }
 
     img {
-      width: 100%;
-      height: 100%;
+      width: 150%;
+      height: 150%;
       object-fit: cover;
       object-position: center top;
       display: block;

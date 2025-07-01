@@ -205,8 +205,8 @@ button {
 }
 
 button[type="submit"] {
-  background: linear-gradient(45deg, #269, #0aa);
-  color: black;
+  background:linear-gradient(20deg, rgb(5, 73, 70), rgb(13, 211, 211));
+  color: rgb(24, 24, 24);
 }
 
 button[type="button"] {

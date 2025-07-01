@@ -11,7 +11,6 @@ export const useAuthStore = defineStore("auth", () => {
   const authReady = ref(false);
   const router = useRouter()
 
-
   watch(
     () => useAuthStore.user,
     (user) => {
@@ -21,7 +20,6 @@ export const useAuthStore = defineStore("auth", () => {
     },
     { immediate: true }
   );
-
 
   // Функция регистрации
   const registerUser = async (username, email, password, confirmPassword) => {
@@ -71,9 +69,6 @@ export const useAuthStore = defineStore("auth", () => {
   }
 }
 
-
-  
-
 async function logout() {
   try {
     await api.post("/auth/logout", null, { withCredentials: true });
@@ -93,8 +88,6 @@ async function logout() {
   }
 }
 
-
-  
   function clearAuth() {
     // Принудительно удаляем все куки
     document.cookie.split(";").forEach((cookie) => {
@@ -109,12 +102,8 @@ async function logout() {
     authStore.user = null;
   }
   
-
   return { user, isAuthenticated, login, logout, fetchUser, isFetching, registerUser, authReady };
 });
-
-
-
 
 
 

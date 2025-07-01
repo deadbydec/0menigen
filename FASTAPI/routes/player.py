@@ -90,6 +90,7 @@ async def get_player_data(user_id: int, db: AsyncSession) -> dict | None:
         } if user.race else None,
         "nullings": user.nullings,
         "specialk": user.specialk,
+        "luck": user.luck,
         "level": user.level,
         "xp": user.xp,
         "nextLevelXp": user.get_xp_to_next_level(),

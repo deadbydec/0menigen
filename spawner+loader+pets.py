@@ -1,0 +1,422 @@
+#routes.pets.py
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy import delete
+from pydantic import BaseModel, Field
+from typing import Optional, List
+from utils.wardrobe_tools import build_avatar_layers
+import logging
+
+from database import get_db
+from models.models import Pet, PetAppearance, PetRenderConfig, Product, UserPetWardrobeItem, InventoryItem, VaultItem
+from auth.cookie_auth import get_current_user_from_cookie
+from utils.slot_utils import get_enum_slot
+
+from fastapi.responses import JSONResponse
+from utils.species_loader import load_all_pet_species  # ← твой готовый утиль
+
+router = APIRouter(prefix="/api/pets", tags=["pets"])
+logger = logging.getLogger(__name__)
+
+class Layer(BaseModel):
+    pid: int
+    rid: Optional[int] = None
+    instance: int
+    slot: Optional[str] = None
+
+class AppearanceUpdate(BaseModel):
+    appearance: dict[str, list[dict]] = Field(default_factory=dict)
+    slot_order: list[Layer] = Field(default_factory=list)
+
+
+@router.get("/", summary="Все питомцы игрока")
+async def get_my_pets(user=Depends(get_current_user_from_cookie), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Pet).where(Pet.user_id == user.id).order_by(Pet.created_at)
+    )
+    pets = result.scalars().all()
+
+    out = []
+    for p in pets:
+        pet_dict = await pet_to_dict(p, db)  # 💥 await обязательно!
+        out.append(pet_dict)
+
+    return out
+
+
+@router.get("/public/{user_id}", summary="Питомцы другого пользователя")
+async def get_public_pets(user_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Pet).where(Pet.user_id == user_id).order_by(Pet.created_at)
+    )
+    pets = result.scalars().all()
+
+    out = []
+    for p in pets:
+        pet_dict = await pet_to_dict(p, db)  # 💥 await обязательно
+        out.append(pet_dict)
+
+    return out
+
+
+
+@router.get("/{pet_id}", summary="Информация о питомце")
+async def get_pet(pet_id: int, user=Depends(get_current_user_from_cookie), db: AsyncSession = Depends(get_db)):
+    pet: Pet | None = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден")
+
+    return await pet_to_dict(pet, db)  # ✅✅✅ вот это и надо!
+
+
+@router.get("/{pet_id}/appearance")
+async def get_appearance(pet_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_from_cookie)):
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден")
+
+    result = await db.execute(
+        select(PetAppearance).where(PetAppearance.pet_id == pet.id).order_by(PetAppearance.slot, PetAppearance.layer_index)
+    )
+    app_rows = result.scalars().all()
+    config = await db.get(PetRenderConfig, pet.id)
+
+    appearance = {}
+    instances = {}
+    for row in app_rows:
+        key = row.slot.name
+        instances.setdefault(key, -1)
+        instances[key] += 1
+        appearance.setdefault(key, []).append({
+            "rid": row.wardrobe_id,
+            "pid": row.product_id,
+            "instance": instances[key]
+        })
+
+    full_slot_order = []
+    if config and isinstance(config.slot_order, list):
+        for layer in config.slot_order:
+            if isinstance(layer, dict):
+                full_slot_order.append({
+                    "pid": layer.get("pid", -1),
+                    "rid": layer.get("rid", -1),
+                    "slot": layer.get("slot", None),
+                    "instance": layer.get("instance", 0),
+                })
+
+    return {"appearance": appearance, "slot_order": full_slot_order}
+
+@router.post("/{pet_id}/appearance/bulk")
+async def save_appearance(
+    pet_id: int,
+    payload: AppearanceUpdate,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user_from_cookie),
+):
+    app_dict = payload.appearance or {}
+    slot_order = payload.slot_order or []
+
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден")
+
+    await db.execute(delete(PetAppearance).where(PetAppearance.pet_id == pet.id))
+
+    for slot_str, layer_list in app_dict.items():
+        try:
+            slot_enum = get_enum_slot(slot_str)
+        except ValueError:
+            continue
+        for layer_index, layer_obj in enumerate(layer_list):
+            pid = layer_obj.get("pid")
+            rid = layer_obj.get("rid")
+            if pid == -1: pid = None
+            if rid == -1: rid = None
+            if pid is None and rid is None:
+                continue
+            db.add(PetAppearance(
+                pet_id=pet.id,
+                slot=slot_enum,
+                wardrobe_id=rid,
+                product_id=pid,
+                layer_index=layer_index
+            ))
+
+    # Гарантируем, что slot_order сериализуется в JSONB
+    full_slot_order = []
+    for layer in slot_order:
+        full_slot_order.append({
+            "pid": layer.pid,
+            "rid": layer.rid,
+            "instance": layer.instance,
+            "slot": layer.slot
+        })
+
+    existing_config = await db.get(PetRenderConfig, pet.id)
+    if existing_config:
+        existing_config.slot_order = full_slot_order
+    else:
+        db.add(PetRenderConfig(
+            pet_id=pet.id,
+            slot_order=full_slot_order
+        ))
+
+    await db.commit()
+    return {"success": True}
+
+
+async def pet_to_dict(pet: Pet, db: AsyncSession) -> dict:
+    
+    return {
+        "id": pet.id,
+        "name": pet.name,
+        "race_code": pet.race_code,
+        "image": pet.image,
+        "trait": pet.trait,
+        "level": pet.level,
+        "intelligence": pet.intelligence,
+        "fullness": pet.fullness,
+        "energy": pet.energy,
+        "health": pet.health,
+        "mood": pet.mood,
+        "bond": pet.bond,
+        "anomaly_level": pet.anomaly_level,
+        "birthdate": pet.birthdate.isoformat() if pet.birthdate else None,
+        "created_at": pet.created_at.isoformat() if pet.created_at else None,
+        "last_update": pet.last_update.isoformat() if pet.last_update else None,
+        "avatar_layers": await build_avatar_layers(pet.id, db, avatar_mode=True, race_code=pet.race_code),
+        # ✅ Новое
+        "biography": pet.biography,
+        "favorite_items": pet.favorite_items or [],
+        "companion": {
+            "product_id": pet.companion_id,
+            "name": pet.companion_name,
+            "image": pet.companion_image,
+            "description": pet.companion_description,
+        } if pet.companion_id else None
+
+    }
+
+class BioEdit(BaseModel):
+    biography: str
+
+class CompanionAttach(BaseModel):
+    product_id: int
+    name: str = ""
+    description: str = ""
+
+class FavoriteItemsPayload(BaseModel):
+    item_ids: list[int] = Field(default_factory=list)  # ID продуктов
+
+@router.post("/{pet_id}/bio", summary="Изменить био питомца")
+async def update_biography(pet_id: int, payload: BioEdit, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_from_cookie)):
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден")
+
+    pet.biography = payload.biography[:2000]  # 🔒 Защита от оверфлоу
+    await db.commit()
+    return {"success": True}
+
+
+@router.post("/{pet_id}/companion", summary="Приручить спутника питомцем")
+async def tame_companion(pet_id: int, payload: CompanionAttach, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_from_cookie)):
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден")
+
+    product = await db.get(Product, payload.product_id)
+    if not product:
+        raise HTTPException(404, "Предмет не найден")
+
+    if "companion" not in (product.types or []):
+        raise HTTPException(400, "Этот предмет нельзя приручить как спутника")
+
+    # 🧠 Проверяем, есть ли в инвентаре такой предмет
+    item_to_delete = await db.scalar(
+        select(InventoryItem)
+        .where(
+            InventoryItem.user_id == user.id,
+            InventoryItem.product_id == product.id
+        )
+        .limit(1)
+    )
+
+    if not item_to_delete:
+        raise HTTPException(400, "У тебя нет этого предмета")
+
+    # ✅ Приручаем спутника
+    pet.companion_id = product.id
+    pet.companion_name = product.name
+    pet.companion_description = product.description or ""
+    pet.companion_image = product.image
+
+    await db.delete(item_to_delete)
+    await db.commit()
+
+    return {"success": True}
+
+
+
+
+class CompanionEdit(BaseModel):
+    name: str = ""
+    description: str = ""
+
+@router.post("/{pet_id}/companion/edit", summary="Редактировать имя и описание спутника")
+async def edit_companion(pet_id: int, payload: CompanionEdit, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_from_cookie)):
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден")
+    if not pet.companion_id:
+        raise HTTPException(400, "У питомца нет спутника")
+
+    pet.companion_name = payload.name[:100]
+    pet.companion_description = payload.description[:2000]
+
+    await db.commit()
+    return {"success": True}
+
+
+
+@router.post("/{pet_id}/favorite-items", summary="Добавить любимые предметы питомцу")
+async def set_favorite_items(pet_id: int, payload: FavoriteItemsPayload, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_from_cookie)):
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден")
+
+    # Собираем все доступные игроку product_id из инвентаря, сейфа и гардероба
+    result = await db.execute(
+        select(Product.id)
+        .join(InventoryItem, InventoryItem.product_id == Product.id, isouter=True)
+        .join(VaultItem, VaultItem.product_id == Product.id, isouter=True)
+        .join(UserPetWardrobeItem, UserPetWardrobeItem.product_id == Product.id, isouter=True)
+        .where(
+            (InventoryItem.user_id == user.id) |
+            (VaultItem.user_id == user.id) |
+            (UserPetWardrobeItem.user_id == user.id)
+        )
+    )
+    allowed_ids = {row[0] for row in result.fetchall() if row[0] is not None}
+
+    # Оставляем только те ID, которые реально есть у игрока
+    filtered = [i for i in payload.item_ids if i in allowed_ids]
+
+    pet.favorite_items = filtered[:20]  # 🔒 максимум 20 любимок
+    await db.commit()
+    return {"success": True, "count": len(filtered)}
+
+
+@router.post("/{pet_id}/companion/remove", summary="Убрать спутника у питомца")
+async def remove_companion(
+    pet_id: int,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user_from_cookie)
+):
+    pet = await db.get(Pet, pet_id)
+    if not pet or pet.user_id != user.id:
+        raise HTTPException(404, "Питомец не найден")
+
+    # Сохраняем ссылку на старого компаньона до удаления
+    old_companion_id = pet.companion_id
+
+    # Очищаем компаньона у питомца
+    pet.companion_id = None
+    pet.companion_name = ""
+    pet.companion_description = ""
+
+    # Если был спутник — вернуть в инвентарь
+    if old_companion_id:
+        item = InventoryItem(
+            user_id=user.id,
+            product_id=old_companion_id,
+            quantity=1
+        )
+        db.add(item)
+
+    await db.commit()
+    return {"success": True}
+
+@router.get("/pet_species")
+async def get_all_pet_species():
+    """
+    Возвращает список всех видов питомцев с метаданными.
+    Формат: [{ species_code: { name, race_code, ... } }, ...]
+    """
+    return JSONResponse(content=load_all_pet_species())
+
+
+#utils.pet_spawner.py
+from utils.species_loader import load_all_pet_species
+from models.models import Pet
+import random
+
+async def spawn_random_pet(user_id: int, db):
+    """
+    Создаёт случайного питомца на основе всех species из pet_species.json.
+    Поддерживает гибридов (race_mix), spawn_variants, trait_pool.
+    """
+    species_data = load_all_pet_species()
+    weighted_species = []
+
+    for entry in species_data:
+        for code, data in entry.items():
+            # ⛔ защита от пустых species_code
+            if not code or not isinstance(code, str) or code.strip() == "":
+                print(f"[SKIP] invalid species_code: {repr(code)}")
+                continue
+
+            weight = data.get("spawn_rules", {}).get("weight", 1.0)
+            weighted_species.append((code, data, weight))
+
+    if not weighted_species:
+        raise ValueError("❌ Нет подходящих питомцев для спауна")
+
+    # выбор по весам
+    choices  = [(code, data) for code, data, _ in weighted_species]
+    weights  = [weight for _, _, weight in weighted_species]
+    selected_code, selected = random.choices(choices, weights=weights)[0]
+
+    # картинка
+    image_variants = selected.get("spawn_variants") or [selected.get("image", "noimage.png")]
+    image_name     = random.choice(image_variants)
+
+    # черта
+    trait_pool = selected.get("trait_pool") or selected.get("default_traits", ["silent"])
+    trait_pick = random.choice(trait_pool)
+
+    # вычисляем race_code (поддержка race_mix)
+    race_code = selected.get("race_code")
+    if not race_code:
+        mix = selected.get("race_mix")
+        if isinstance(mix, list) and mix:
+            race_code = "+".join(mix)
+        else:
+            race_code = "unknown"
+
+    return Pet(
+        user_id      = user_id,
+        species_code = selected_code,  # теперь гарантированно ≠ None
+        race_code    = race_code,
+        name         = "...",
+        image        = f"pets/{image_name}",
+        trait        = trait_pick,
+
+
+#species_loader.py
+import json
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PET_SPECIES_PATH = os.path.join(BASE_DIR, "data", "pet_species.json")
+
+def load_all_pet_species():
+    try:
+        with open(PET_SPECIES_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+            assert isinstance(data, list), "pet_species.json должен быть списком"
+            return data
+    except Exception as e:
+        print(f"💥 Ошибка при загрузке pet_species.json: {e}")
+        return []

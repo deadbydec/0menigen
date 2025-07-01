@@ -111,7 +111,7 @@ html, body {
   }
 
   .active {
-    background:linear-gradient(50deg, rgb(24, 24, 24), rgb(2, 85, 81),rgb(5, 235, 196));
+    background:linear-gradient(20deg, rgb(5, 73, 70), rgb(13, 211, 211));
     color: white;
   }
 }

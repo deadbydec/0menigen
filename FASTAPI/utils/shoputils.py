@@ -14,26 +14,6 @@ from database import async_session
 # Подключение к Redis (асинхронно)
 redis_client = redis_async.from_url("redis://localhost", decode_responses=True)
 
-#async def shop_updater_loop():
-#    while True:
-#        try:
-#            print("🔁 Обновляем магазин...")
-
-#            async with async_session() as db:
-#                new_products = await get_random_products(db)
-
-#            await redis_client.set("global_shop", json.dumps(new_products))
-#            await sio.emit("shop_updated", {"products": new_products})
-
-#            print("✅ Магазин обновлён, ждём 15 минут...")
-
-#        except Exception as e:
-#            print(f"🔥 Ошибка обновления магазина: {e}")
-
-#        await asyncio.sleep(1 * 60)
-
-
-
 # 🔹 Загрузка товаров из JSON
 async def load_products_from_json():
     with open(Config.PRODUCTS_FILE, encoding="utf-8") as file:
@@ -182,3 +162,21 @@ async def reset_stock(db: AsyncSession):
         product.stock = 0  # или вообще пропускаем
     await db.commit()
     print("✅ (safe) Reset stock завершён")
+
+# 🔹 Генерация донатного магазина (только glitched)
+async def set_donate_shop_from_json():
+    with open(Config.PRODUCTS_FILE, encoding="utf-8") as f:
+        all_products = json.load(f)
+
+    donate_products = [
+        p for p in all_products
+        if p.get("rarity") == "glitched"
+        and p.get("is_nulling_only") is True
+        and "nulling_price" in p
+    ]
+
+    await redis_client.set("donate_shop", json.dumps(donate_products))
+    print(f"🧿 Донат-магазин установлен: {len(donate_products)} glitched-товаров")
+
+
+

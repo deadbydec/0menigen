@@ -15,6 +15,7 @@
     
     <main class="main-content">
       <PlayerInfo v-if="isAuthenticated" />
+      <PredatorOverlay ref="vova" />
       <router-view/>
       <GlobalChat v-if="isAuthenticated" />
     </main>
@@ -40,6 +41,7 @@ import { usePlayerStore } from "@/store/player";
 import GlobalTooltip from "@/components/GlobalTooltip.vue";
 import Header from "@/components/Header.vue";
 import Footer from "@/components/Footer.vue";
+import PredatorOverlay from "@/components/system/PredatorOverlay.vue";
 
 const authStore = useAuthStore();
 const chatStore = useChatStore();
@@ -47,6 +49,7 @@ const playerStore = usePlayerStore();
 
 const isAuthenticated = computed(() => authStore.isAuthenticated);
 const authReady = computed(() => authStore.authReady);
+const vova = ref(null)
 
 let socket;
 
@@ -54,6 +57,10 @@ onMounted(async () => {
   await authStore.fetchUser();
   if (authStore.isAuthenticated) connectSocket();
 });
+
+onMounted(() => {
+  window.__vova = vova
+})
 
 watch(isAuthenticated, (logged) => {
   if (logged) connectSocket();

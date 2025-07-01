@@ -1,148 +1,199 @@
 <template>
-  <div class="vip-shop-container">
-    <!-- Левая колонка с категориями -->
-    <aside class="shop-sidebar">
-      <div
-        v-for="category in categories"
-        :key="category"
-        :class="['category', { active: selectedCategory === category }]"
-        @click="selectCategory(category)"
-      >
-        {{ category }}
-      </div>
-    </aside>
+  <div class="wrap">
+  <div class="vip-shop-layout">
+    <!-- Левая панель с баннером -->
+    <div class="vip-sidebar">
+      <img :src="bannerLeft" alt="баннер" class="sidebar-banner" />
+    </div>
 
-    <!-- Правая колонка с товарами -->
-    <section class="shop-main">
-      <div class="products-grid">
+    <!-- Контент магазина -->
+    <div class="vip-main">
+      <!-- Верхний баннер -->
+      <div class="top-banner">
+        <img :src="bannerTop" alt="баннер" class="top-banner-img" />
+
+      </div>
+
+      <!-- Вкладки -->
+      <div class="tab-bar">
+        <div
+          v-for="tab in tabs"
+          :key="tab"
+          :class="['tab', { active: selectedTab === tab }]"
+          @click="selectedTab = tab"
+        >
+          {{ tab }}
+        </div>
+      </div>
+
+      <!-- Сетка с товарами -->
+      <div class="product-grid">
         <div
           v-for="product in filteredProducts"
           :key="product.id"
           class="product-card"
         >
-          <img
-            :src="`${STATIC}/static/goods/${product.image}`"
-            alt="product image"
-          />
-          <h3>{{ product.name }}</h3>
+          <img :src="`${STATIC}/static/goods/${product.image}`" alt="product" />
+          <h4>{{ product.name }}</h4>
           <p class="price">{{ product.nulling_price }} 🧿</p>
         </div>
       </div>
-    </section>
-  </div>
+    </div>
+  </div></div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import axios from '@/utils/axios'
+import bannerLeft from '@/assets/vip-bar.jpg'
+import bannerTop from '@/assets/vip-shop.jpg'
+import { useVipShopStore } from "@/store/vipshop"
 
 const STATIC = import.meta.env.VITE_STATIC_URL || 'https://localhost:5002'
-const selectedCategory = ref('всё')
-const products = ref([])
-const categories = ref(['всё', 'аура', 'фон', 'спутник', 'эссенция', 'аксессуар'])
 
-const filteredProducts = computed(() => {
-  if (selectedCategory.value === 'всё') return products.value
-  return products.value.filter(
-    (p) =>
-      p.custom?.slot === selectedCategory.value ||
-      p.slot === selectedCategory.value
-  )
-})
+const tabs = ['наборы', 'артефакты', 'спутники', 'фоны', 'привилегии', 'прочее']
+const selectedTab = ref(tabs[0])
 
-async function fetchVipProducts() {
-  try {
-    const { data } = await axios.get('/vip-shop', { withCredentials: true })
-    products.value = data.products || []
-  } catch (err) {
-    console.error('❌ Ошибка загрузки VIP-магазина:', err)
-  }
-}
-
-function selectCategory(cat) {
-  selectedCategory.value = cat
-}
+const vipStore = useVipShopStore()
+const products = computed(() => vipStore.vipItems)
 
 onMounted(() => {
-  fetchVipProducts()
+  vipStore.fetchVipItems()
+})
+
+// 💎 маппинг вкладок на типы
+const tabToTypes = {
+  "наборы": ["bundle"],
+  "артефакты": ["artifact"],
+  "спутники": ["companion"],
+  "фоны": ["background", "cosmetic"],
+  "привилегии": ["privilege"],
+  "прочее": ["book", "toy", "souvenir", "coupon", "misc", "unknown"]
+}
+
+const filteredProducts = computed(() => {
+  const tab = selectedTab.value
+  const allowedTypes = tabToTypes[tab] || []
+  return products.value.filter(p => {
+    const mainType = p.product_type
+    const altTypes = p.types || []
+    return allowedTypes.includes(mainType) || altTypes.some(t => allowedTypes.includes(t))
+  })
 })
 </script>
 
-<style scoped lang="scss">
-.vip-shop-container {
+
+<style scoped>
+.wrap {
+  margin-top: 150px;
+}
+
+.vip-shop-layout {
+  
   display: flex;
+  background: #181818e7;
   gap: 20px;
   padding: 20px;
   font-family: 'Fira Code', monospace;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.shop-sidebar {
-  flex: 0 0 200px;
-  background-color: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
-  padding: 15px;
-
-  .category {
-    padding: 10px;
-    margin-bottom: 8px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.2s ease;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.06);
-    }
-
-    &.active {
-      background: rgba(255, 255, 255, 0.1);
-    }
-  }
+.vip-sidebar {
+  width: 300px;
 }
 
-.shop-main {
+.sidebar-banner {
+  width: 300px;
+  height: 700px;
+  border-radius: 30px;
+  object-fit: cover;
+}
+
+.vip-main {
   flex: 1;
-  background-color: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
 
-  .products-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 18px;
+.top-banner {
+  margin-bottom: 12px;
+}
 
-    .product-card {
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 10px;
-      padding: 10px;
-      text-align: center;
-      transition: transform 0.2s;
+.top-banner {
+  width: 800px;
+  height: 250px;
+  border-radius: 30px;
+  
+}
 
-      img {
-        max-width: 100%;
-        border-radius: 6px;
-      }
+.top-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* растягиваем красиво без сплющивания */
+  border-radius: 30px; /* дублируем для верности, но можно убрать */
+}
 
-      h3 {
-        margin: 8px 0 4px;
-        font-size: 14px;
-      }
+.tab-bar {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 2px solid rgba(255,255,255,0.1);
+}
 
-      .price {
-        font-size: 12px;
-        color: #95e5ff;
-      }
+.tab {
+  padding: 10px 18px;
+  margin-right: 4px;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  background: #202020;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-bottom: none;
+  transition: 0.2s ease;
+  font-weight: 600;
+  user-select: none;
+}
 
-      &:hover {
-        transform: scale(1.03);
-      }
-    }
-  }
+.tab.active {
+  background: #2c2c2c;
+  border-bottom: 2px solid #2c2c2c;
+  color: #95e5ff;
+}
+
+.product-grid {
+  background: #181818e7;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.product-card {
+  background: #1b1b1b;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  transition: 0.2s ease;
+}
+
+.product-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 10px rgba(0,0,0,0.4);
+}
+
+.product-card img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+.product-card h4 {
+  margin: 6px 0 4px;
+  font-size: 14px;
+}
+
+.price {
+  font-size: 12px;
+  color: #95e5ff;
 }
 </style>
+
+

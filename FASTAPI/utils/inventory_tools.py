@@ -1,5 +1,6 @@
 from models.models import InventoryItem, Incubation
 from typing import Optional, Dict
+from fastapi import HTTPException
 
 def build_inventory_item(item: InventoryItem) -> Dict:
     incubation: Optional[Incubation] = (
@@ -12,6 +13,7 @@ def build_inventory_item(item: InventoryItem) -> Dict:
         "type": item.product.product_type.value,
         "image": item.product.image,
         "rarity": item.product.rarity.value,
+        "state": item.state,  # ← 💥 ДОБАВЬ ЭТУ СТРОКУ
         "quantity": item.quantity,
         "incubation": (
             {
@@ -30,3 +32,8 @@ def build_inventory_item(item: InventoryItem) -> Dict:
             "types": item.product.types or [],  # ✅ ВОТ ЭТО
         },
     }
+
+# 🔒 Проверка предмета
+def assert_item_unlocked(item: InventoryItem):
+    if item.state in {"locked", "equipped", "safe", "auction"}:
+        raise HTTPException(403, detail="Этот предмет сейчас недоступен (заблокирован).")

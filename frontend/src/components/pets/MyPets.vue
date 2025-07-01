@@ -11,14 +11,19 @@
           v-tooltip="slots[idx - 1] ? slots[idx - 1].trait : ''"
         >
           <template v-if="slots[idx - 1]">
-            <img
-              :src="`${STATIC_BASE}/static/${slots[idx - 1].image}`"
-              :alt="slots[idx - 1].name"
-              @error="onImageError"
-            />
-            <div class="pet-name">{{ slots[idx - 1].name }}</div>
-            <div class="pet-level">{{ slots[idx - 1].level }} lvl</div>
-          </template>
+  <div class="pet-render-full">
+    <img
+      v-for="layer in orderedLayers(slots[idx - 1].avatar_layers)"
+      :key="layer.src + layer.z"
+      :src="layer.src"
+      class="layer-full"
+      :style="{ zIndex: layer.z }"
+    />
+  </div>
+  <div class="pet-name">{{ slots[idx - 1].name }}</div>
+  <div class="pet-level">{{ slots[idx - 1].level }} lvl</div>
+</template>
+
           <template v-else>
             <span class="empty-text">пусто</span>
           </template>
@@ -45,6 +50,12 @@ const slots = computed(() => {
   return arr
 })
 
+function orderedLayers(layers) {
+  return [...(layers || [])].sort((a, b) => a.z - b.z)
+}
+
+
+
 onMounted(() => {
   console.log("🌀 Загружаем питомцев...")
   petsStore.fetchAllPets().then(() => {
@@ -67,6 +78,24 @@ onMounted(() => {
 </script>
 
 <style scoped>
+
+.pet-render-full {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.layer-full {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
 
 .pet-name,
 .pet-level {

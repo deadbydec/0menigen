@@ -1,3 +1,4 @@
+#main.py
 import os
 import json
 import socketio
@@ -19,11 +20,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_socketio import SocketManager
 import logging
 from fastapi.logger import logger
-from models import TokenBlocklist, News, User, Product, ForumThread
-
+from models import TokenBlocklist, News, User, Product, ForumThread, AuctionLot, InventoryItem, Pet
+import asyncio
+from sqlalchemy import update
+from datetime import datetime, timezone
+from utils.shoputils import set_donate_shop_from_json  # или set_donate_shop_from_db
 from database import get_db, async_session
 from sqlalchemy.future import select
 from utils.last_seen import set_user_online
+from utils.expire_auction import auto_expire_auction_lots
 from fastapi_jwt import JwtAccessBearer, JwtAuthorizationCredentials
 from starlette.requests import Request
 from auth.cookie_auth import get_current_user_from_cookie, DebugCookieAuthMiddleware, AsyncCookieAuthMiddleware
@@ -56,12 +61,15 @@ jwt_access = JwtAccessBearer(
     refresh_expires_delta=settings.JWT_REFRESH_TOKEN_EXPIRES
 )
 
-
 redis_client = Redis.from_url("redis://localhost", decode_responses=True)
 
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(background_shop_updater())
+    asyncio.create_task(auto_expire_auction_lots())
+
+    # Подгружаем донат-магазин
+    await set_donate_shop_from_json()
 
     async with async_session() as db:
         result = await db.execute(select(TokenBlocklist))
@@ -71,12 +79,85 @@ async def startup_event():
         await db.commit()
     print("✅ Блоклист токенов очищен при старте сервера!")
 
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     return JSONResponse(
         status_code=500,
         content={"detail": str(exc)},
     )
+
+async def auto_expire_auction_lots():
+    while True:
+        try:
+            async with async_session() as db:
+                now = datetime.now(timezone.utc)
+
+                result = await db.execute(
+                    select(AuctionLot)
+                    .where(AuctionLot.expires_at < now, AuctionLot.is_active == True)
+                )
+                expired_lots = result.scalars().all()
+
+                for lot in expired_lots:
+                    lot.is_active = False
+
+                    if lot.highest_bidder_id:
+                        # 🎯 победитель есть — передаём и платим
+                        if lot.item_type == "item":
+                            item_result = await db.execute(
+                                select(InventoryItem).where(InventoryItem.id == lot.item_id)
+                            )
+                            item = item_result.scalar_one_or_none()
+                            if item:
+                                item.user_id = lot.highest_bidder_id
+                                item.state = None
+
+                        elif lot.item_type == "pet":
+                            pet_result = await db.execute(
+                                select(Pet).where(Pet.id == lot.item_id)
+                            )
+                            pet = pet_result.scalar_one_or_none()
+                            if pet:
+                                pet.user_id = lot.highest_bidder_id
+                                pet.state = "normal"
+
+                        seller_result = await db.execute(
+                            select(User).where(User.id == lot.owner_id)
+                        )
+                        seller = seller_result.scalar_one_or_none()
+                        if seller:
+                            if lot.currency == "coins":
+                                seller.coins += int(lot.current_bid)
+                            elif lot.currency == "nullings":
+                                seller.nullings += round(float(lot.current_bid), 2)
+
+                    else:
+                        # ❌ никто не победил — просто вернуть предмет владельцу
+                        if lot.item_type == "item":
+                            item_result = await db.execute(
+                                select(InventoryItem).where(InventoryItem.id == lot.item_id)
+                            )
+                            item = item_result.scalar_one_or_none()
+                            if item:
+                                item.state = "normal"
+
+                        elif lot.item_type == "pet":
+                            pet_result = await db.execute(
+                                select(Pet).where(Pet.id == lot.item_id)
+                            )
+                            pet = pet_result.scalar_one_or_none()
+                            if pet:
+                                pet.state = "normal"
+
+                await db.commit()
+                print(f"[AUCT-CLEANUP] завершено: {len(expired_lots)} лотов @ {now.isoformat()}")
+
+        except Exception as e:
+            print(f"[AUCT-CLEANUP] ошибка: {e}")
+
+        await asyncio.sleep(60 * 5)  # 🔁 каждые 5 минут
+
 
 from routes.chat import socket_app, router as chat_router
 app.mount("/socket.io", socket_app)
@@ -105,7 +186,7 @@ async def root():
     return {"message": "FastAPI + Socket.IO работает!"}
 
 
-from routes import auth_router, adminarnia_router, pets_router, clans_router, wardrobe_router, npcquests_router, safe_router, verifyemail_router, playershop_router, landfill_router, donateshop_router, toilet_doom_router, gift_router, shop_router, news_router, index_router, player_router, players_router, inventory_router, games_router, profile_router, friends_router, inbox_router, wall_router, achievements_router, leaderboard_router, forum_router
+from routes import auth_router, adminarnia_router, pets_router, auction_router, clans_router, wardrobe_router, npcquests_router, safe_router, verifyemail_router, playershop_router, landfill_router, donateshop_router, toilet_doom_router, gift_router, shop_router, news_router, index_router, player_router, players_router, inventory_router, games_router, profile_router, friends_router, inbox_router, wall_router, achievements_router, leaderboard_router, forum_router
 
 # Подключаем роутеры (аналог Flask Blueprint)
 app.include_router(index_router)
@@ -127,7 +208,7 @@ app.include_router(player_router)
 app.include_router(gift_router)
 app.include_router(toilet_doom_router)
 app.include_router(landfill_router)
-app.include_router(donateshop_router, prefix="/api/donateshop")
+app.include_router(donateshop_router)
 app.include_router(playershop_router, prefix="/api/playershop")
 app.include_router(safe_router, prefix="/api/safe")
 app.include_router(verifyemail_router)
@@ -135,6 +216,7 @@ app.include_router(pets_router)
 app.include_router(wardrobe_router)
 app.include_router(npcquests_router)
 app.include_router(clans_router)
+app.include_router(auction_router)
 
 app.include_router(adminarnia_router) #ебаная админарня
 

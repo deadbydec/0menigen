@@ -26,8 +26,9 @@ from .pets import router as pets_router
 from .wardrobe import router as wardrobe_router
 from .npcquests import router as npcquests_router
 from .clans import router as clans_router
-
+from .auction import router as auction_router
 __all__ = [
+    "auction_router",
     "clans_router",
     "npcquests_router",
     "wardrobe_router",

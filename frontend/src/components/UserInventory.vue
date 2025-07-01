@@ -8,6 +8,7 @@ import api from '@/utils/axios'
 import { useWardrobeStore } from '@/store/wardrobe'
 import { useToastStore } from '@/store/toast'
 import { useTooltipStore } from '@/store/tooltipStore'
+import ReadForModal from './ReadForModal.vue'
 
 const wardrobeStore = useWardrobeStore()
 
@@ -61,6 +62,8 @@ const primaryLabel = computed(() => {
 
   if (isEgg.value && !selectedItem.value.incubation) return 'Инкубировать'
   if (isEggRunning.value) return 'Вылупление…'
+  if (selectedItem.value?.product?.product_type === "book") return "Прочитать"
+
   return 'Использовать'
 })
 
@@ -73,6 +76,7 @@ function formatRemaining(hatchISO) {
 
 /* ▸ CLICK HANDLERS */
 function handleItemClick(item) {
+  if (item.state === 'auction') return
   inventoryStore.selectItem(item)
 
   if (item.type === 'creature' && isReadyToHatch(item)) {
@@ -80,6 +84,7 @@ function handleItemClick(item) {
     showHatchModal.value = true
   }
 }
+
 
 function handleHatched(data) {
   inventoryStore.selectItem(null)
@@ -138,7 +143,7 @@ const sendToWardrobe = async (itemId) => {
 
 
 function onImageError(e) {
-  e.target.src = `${STATIC_BASE}/static/goods/no_image.png`
+  e.target.src = `${STATIC_BASE}/static/goods/noimage.png`
 }
 
 /* ▸ HATCH */
@@ -195,6 +200,37 @@ function getRarityClass(rarity) {
  // return "50px"
 //})
 
+const showBookModal = ref(false)
+const allMyPets = ref([])
+const availablePetsToRead = computed(() =>
+  allMyPets.value.filter(pet =>
+    !pet.read_books?.includes(selectedItem.value?.product?.custom?.unique_read_id)
+  )
+)
+
+async function openBookModal() {
+  try {
+    const { data } = await api.get('/pets/') // или свой endpoint
+    allMyPets.value = data
+    showBookModal.value = true
+  } catch (err) {
+    toast.addToast('Ошибка загрузки питомцев', { type: 'error' })
+  }
+}
+
+async function readBook(petId) {
+  try {
+    const result = await inventoryStore.useBookOnPet(petId, selectedItem.value.product_id)
+    toast.addToast(result.message, { type: 'success' })
+    showBookModal.value = false
+    selectedItem.value = null
+    await inventoryStore.fetchInventory()
+  } catch (err) {
+    toast.addToast(err.response?.data?.detail || 'Ошибка при чтении книги', { type: 'error' })
+  }
+}
+
+
 </script>
 
 
@@ -207,7 +243,7 @@ function getRarityClass(rarity) {
         <!-- 🧷 ПАНЕЛЬ С ДЕЙСТВИЯМИ (СЛЕВА) -->
         <div
           class="inventory-actions-panel"
-          v-if="selectedItem && !(isEggRunning || isEggReady)"
+          v-if="selectedItem && selectedItem.state !== 'auction' && !(isEggRunning || isEggReady)"
         >
           <p class="selected-label">
             Выбрано: {{ selectedItem.product.name }}
@@ -223,13 +259,22 @@ function getRarityClass(rarity) {
             </button>
 
             <button
-              v-else
-              class="ghost-button"
-              :disabled="isEggRunning"
-              @click="handlePrimary"
-            >
-              {{ primaryLabel }}
-            </button>
+  v-else-if="selectedItem.product.product_type?.toLowerCase() === 'книга'"
+  class="ghost-button"
+  @click="openBookModal"
+>
+  Прочитать
+</button>
+
+<button
+  v-else
+  class="ghost-button"
+  :disabled="isEggRunning"
+  @click="handlePrimary"
+>
+  {{ primaryLabel }}
+</button>
+
 
             <button
               v-if="inventoryStore.userRace === 'nullvour'"
@@ -278,7 +323,8 @@ function getRarityClass(rarity) {
               :class="{
                 'selected-item': selectedItem && selectedItem.id === item.id,
                 'egg-ready':   item.type === 'creature' && isReadyToHatch(item),
-                'egg-running': item.type === 'creature' && item.incubation && !isReadyToHatch(item)
+                'egg-running': item.type === 'creature' && item.incubation && !isReadyToHatch(item),
+                'disabled-slot': item.state === 'auction'
               }"
             >
               <img
@@ -296,11 +342,15 @@ function getRarityClass(rarity) {
 
             <!-- ▸ НАДПИСИ ПОД КАРТОЧКОЙ -->
             <div class="item-caption">
-              <div class="item-name">{{ item.product.name }}</div>
-              <div class="item-rarity" :class="getRarityClass(item.product.rarity)">
-                {{ item.product.rarity }}
-              </div>
-            </div>
+  <div class="item-name">{{ item.product.name }}</div>
+  <div class="item-rarity" :class="getRarityClass(item.product.rarity)">
+    {{ item.product.rarity }}
+  </div>
+  <div class="item-status" v-if="item.state === 'auction'">
+    <span class="locked">🔒 На аукционе</span>
+  </div>
+</div>
+
           </div>
         </div>
 
@@ -324,11 +374,36 @@ function getRarityClass(rarity) {
       @hatched="handleHatched"
     />
   </div>
+
+  <ReadForModal
+  :visible="showBookModal"
+  :pets="availablePetsToRead"
+  title="Выбор питомца"
+  @close="showBookModal = false"
+  @select="readBook"
+/>
+
 </template>
 
 
 <style lang="scss">
 /* Убираем лишние стили для body */
+
+.item-status .locked {
+  font-size: 0.85em;
+  color: #999;
+  font-style: italic;
+  margin-top: 2px;
+  display: block;
+}
+
+
+.disabled-slot {
+  pointer-events: none;
+  opacity: 0.4;
+  filter: grayscale(0.6);
+}
+
 
 .page-inner {
   position: relative; // ← обязательно
@@ -437,6 +512,7 @@ h1 {
   font-family: 'JetBrains Mono', monospace;
   color: #fff;
   flex-shrink: 0;
+  z-index: 1000;
 
   .selected-label {
     font-size: 13px;

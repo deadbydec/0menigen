@@ -14,8 +14,7 @@ from utils.inventory_tools import build_inventory_item
 from random   import choice
 from pydantic import BaseModel, constr
 from fastapi import Body
-
-
+from pydantic import field_validator
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
@@ -26,9 +25,15 @@ class GiftPayload(BaseModel):
     quantity: int = 1
 
 class HatchPayload(BaseModel):
-    # имя обязательно, 3–15 видимых символов, без лишних пробелов
     name: constr(strip_whitespace=True, min_length=3, max_length=15)
-    incubation_id: int | None = None      # опционально выбрать конкретное яйцо
+    incubation_id: int | None = None
+
+    @field_validator("name")
+    @classmethod
+    def check_visible_length(cls, v):
+        if len(v.strip()) < 3:
+            raise ValueError("Имя должно содержать хотя бы 3 видимых символа.")
+        return v
 
 @router.get("/")
 async def get_inventory(
@@ -90,7 +95,11 @@ async def incubate_item(
     item = result.scalar()
 
     if not item or item.user_id != user.id:
-        raise HTTPException(status_code=403, detail="Этот предмет не твой")
+        raise HTTPException(403, detail="Этот предмет вам не принадлежит!")
+
+    from utils.inventory_tools import assert_item_unlocked
+    assert_item_unlocked(item)
+
 
     if item.product.product_type != ProductType.creature:
         raise HTTPException(status_code=400, detail="Это не яйцо!")
@@ -133,19 +142,14 @@ async def incubate_item(
 
 @router.post("/hatch")
 async def hatch_pet(
-    payload: HatchPayload = Body(...),            # ←  …  тело ОБЯЗАТЕЛЬНО
-    db: AsyncSession        = Depends(get_db),
-    user: User              = Depends(get_current_user_from_cookie),
-):   
-    # ② подцепляем пользователя в ТЕКУЩЕЙ сессии и сразу грузим race
+    payload: HatchPayload = Body(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user_from_cookie),
+):
     user = await db.get(User, user.id, options=[selectinload(User.race)])
-    """Вылупляет питомца (имя — строго обязательное)."""
-
-    # 0 ▸ доп. проверка (хотя Pydantic уже отвалидировал)
     if not payload.name:
         raise HTTPException(400, "Нужно придумать имя для питомца!")
 
-    # 1 ▸ ищем готовую инкубацию (или конкретную по id)
     q = (
         select(Incubation)
         .where(
@@ -161,40 +165,59 @@ async def hatch_pet(
     if payload.incubation_id:
         q = q.where(Incubation.id == payload.incubation_id)
 
-    result      = await db.execute(q)
-    incubation  = result.scalar_one_or_none()
+    result = await db.execute(q)
+    incubation = result.scalar_one_or_none()
     if not incubation:
         raise HTTPException(400, "Нет готовых к вылуплению яиц")
 
-    egg_item     = incubation.inventory_item
-    egg_product  = egg_item.product
+    egg_item = incubation.inventory_item
+    egg_product = egg_item.product
     egg_settings = egg_product.custom or {}
 
-    # 2 ▸ параметры пета
-    race_code  = egg_settings.get("race_code", user.race.code if user.race else "unknown")
+    # 💎 особая логика для мистического яйца
+    if egg_product.id == 511:
+        from utils.pet_spawner import spawn_random_pet
+
+        new_pet = await spawn_random_pet(user.id, db)
+        new_pet.name = payload.name
+        db.add(new_pet)
+
+        incubation.is_hatched = True
+        await db.delete(egg_item)
+        await db.commit()
+        await db.refresh(new_pet)
+
+        return {
+            "id": new_pet.id,
+            "name": new_pet.name,
+            "image": new_pet.image
+        }
+
+
+    # 🐣 обычное яйцо (по расе, как раньше)
+    race_code = egg_settings.get("race_code", user.race.code if user.race else "unknown")
     image_name = choice(egg_settings.get("spawn_variants", ["noimage.png"]))
     trait_pick = choice(egg_settings.get("trait_pool", ["silent"]))
 
-    # 3 ▸ создаём Pet
     new_pet = Pet(
-        user_id   = user.id,
-        race_code = race_code,
-        name      = payload.name,               # ← имя из запроса
-        image     = f"pets/{image_name}",
-        trait     = trait_pick,
+        user_id=user.id,
+        race_code=race_code,
+        name=payload.name,
+        image=f"pets/{image_name}",
+        trait=trait_pick,
     )
     db.add(new_pet)
 
-    # 4 ▸ завершаем инкубацию
     incubation.is_hatched = True
-    await db.delete(egg_item)                   # удаляем яйцо
-
+    await db.delete(egg_item)
     await db.commit()
     await db.refresh(new_pet)
 
-    return {"id": new_pet.id, "name": new_pet.name, "image": new_pet.image}
-
-
+    return {
+        "id": new_pet.id,
+        "name": new_pet.name,
+        "image": new_pet.image
+    }
 
 
 @router.post("/{item_id}")
@@ -218,8 +241,12 @@ async def gift_item(
     .options(selectinload(InventoryItem.product))
 )
     sender_item = result.scalar()
+    from utils.inventory_tools import assert_item_unlocked
+    
+
     if not sender_item or sender_item.quantity < quantity:
         raise HTTPException(status_code=400, detail="Недостаточно предметов для подарка.")
+    assert_item_unlocked(sender_item)
 
     # Ищем получателя
     result = await db.execute(select(User).where(User.id == recipient_id))
@@ -276,9 +303,15 @@ async def use_item(
     item = result.scalar()
 
     if not item or item.user_id != user.id:
-        raise HTTPException(status_code=403, detail="Этот предмет вам не принадлежит!")
+        raise HTTPException(403, detail="Этот предмет вам не принадлежит!")
+
+    from utils.inventory_tools import assert_item_unlocked
+    assert_item_unlocked(item)
+
 
     product = item.product
+    if not product:
+        raise HTTPException(500, detail="У предмета отсутствует привязанный продукт.")
     response = {"success": True, "message": f"Вы использовали {product.name}!"}
 
     # Логика использования
@@ -321,7 +354,11 @@ async def discard_item(
     inventory_item = result.scalar()
 
     if not inventory_item or inventory_item.user_id != user.id:
-        raise HTTPException(status_code=403, detail="Этот предмет вам не принадлежит!")
+        raise HTTPException(403, detail="Этот предмет вам не принадлежит!")
+
+    from utils.inventory_tools import assert_item_unlocked
+    assert_item_unlocked(inventory_item)
+
 
     item_name = inventory_item.product.name
 
@@ -367,8 +404,11 @@ async def recycle_item(
     )
     item = result.scalar()
 
-    if not item or item.user_id != user.id:
+    if not item or item.user_id != user.id or not item.product:
         raise HTTPException(status_code=403, detail="Этот предмет вам не принадлежит!")
+    from utils.inventory_tools import assert_item_unlocked
+    assert_item_unlocked(item)
+
 
     product = item.product
     result_msg = [f"Вы переработали {product.name}..."]

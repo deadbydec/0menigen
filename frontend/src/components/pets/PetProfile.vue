@@ -76,8 +76,14 @@
 
     <!-- ╭─ Stats ───────────────────────────────────────────╮ -->
     <section class="glass-card stats-card" v-if="!isLoading && pet">
-      <h3 class="card-title">Статистика</h3>
+      <h3 class="card-title">Инфо</h3>
       <ul class="stats-list">
+        <li><strong>Раса:</strong> {{ pet.species?.race_name || 'неизвестен' }}</li>
+<li><strong>Вид:</strong> {{ pet.species?.name || 'неизвестен' }}</li>
+
+
+
+
         <li><strong>🧬 Черта:</strong> {{ pet.trait }}</li>
         <li><strong>📈 Уровень:</strong> {{ pet.level }}</li>
         <li><strong>🧠 Интеллект:</strong> {{ pet.intelligence }}</li>
@@ -157,6 +163,12 @@ const editingBio = ref(false)
 const editingCompanion = ref(false)
 const companionName = ref('')
 const companionDesc = ref('')
+const speciesMeta = computed(() => petsStore.speciesMap || {})
+
+function formatRace(code) {
+  if (!code) return '—'
+  return code.includes('+') ? code.split('+').join(' + ') : code
+}
 
 const getItemIcon = (filename) =>
   `${import.meta.env.VITE_STATIC_URL || 'https://localhost:5002'}/static/goods/${filename}`
@@ -164,35 +176,43 @@ const getItemIcon = (filename) =>
 onMounted(async () => {
   isLoading.value = true
 
-  // если питомцы ещё не загружены, грузим всех
+  const rawId = route.params.id
+  const petId = Number(rawId)
+
+  if (!rawId || isNaN(petId)) {
+    console.error("💥 некорректный ID из маршрута:", rawId)
+    isLoading.value = false
+    router.push("/mypets")
+    return
+  }
+
+  await petsStore.fetchSpeciesMeta()
+
   if (!petsStore.myPets.length) {
     await petsStore.fetchAllPets()
   }
 
-  // грузим конкретного питомца
   await petsStore.fetchPetById(petId)
 
-  // appearance + wardrobe + inventory
   await Promise.all([
     renderStore.fetchAppearance(petId, true),
     wardrobeStore.fetchWardrobe(),
     inventoryStore.fetchInventory(),
   ])
 
-const p = pet.value
-if (p?.id) {
-  layers.value = renderStore.getLayersForPet(p.id)
-  newBio.value = p.biography || ''
-  
-  if (p.companion && typeof p.companion === 'object') {
-    companionName.value = p.companion.name || ''
-    companionDesc.value = p.companion.description || ''
-  } else {
-    companionName.value = ''
-    companionDesc.value = ''
-  }
-}
+  const p = pet.value
+  if (p?.id) {
+    layers.value = renderStore.getLayersForPet(p.id)
+    newBio.value = p.biography || ''
 
+    if (p.companion && typeof p.companion === 'object') {
+      companionName.value = p.companion.name || ''
+      companionDesc.value = p.companion.description || ''
+    } else {
+      companionName.value = ''
+      companionDesc.value = ''
+    }
+  }
 
   isLoading.value = false
 })
@@ -212,6 +232,12 @@ const cancelEditCompanion = () => {
 const cancelEditBio = () => {
   editingBio.value = false
 }
+
+const speciesName = computed(() => {
+  const code = pet.value?.species_code
+  const meta = speciesMeta.value?.[code]
+  return meta?.species_name || code || '—'
+})
 
 
 
@@ -262,18 +288,12 @@ function openCompanionPicker() {
   // тут будет логика выбора спутника
 }
 
-
 watchEffect(() => {
   if (pet.value?.id) {
     layers.value = renderStore.getLayersForPet(pet.value.id)
   }
 })
 </script>
-
-
-
-
-
 
 <style scoped>
 
@@ -405,24 +425,24 @@ button {
 /* ── Grid layout ───────────────────────────────────── */
 .pet-grid {
   display: grid;
-  grid-template-columns: 360px 1fr;   /* левая колонка уже, правая — всё остальное */
+ grid-template-columns: 400px 1fr;
+
   grid-template-rows: auto auto auto; /* 1-я строка stats, 2-я bio, 3-я extra */
   column-gap: 2.0rem;
   row-gap: 2rem;                      /* горизонтальный и вертикальный «воздух» */
-  max-width: 900px;
+  max-width: 1300px;
   margin: 1rem auto;                  /* внешний отступ сверху/снизу */
   padding: 0 1.5rem 2rem;             /* внутренний отступ по бокам + снизу */
   box-sizing: border-box;
+  margin-top: 120px;
 }
 
 /* ── Glasslite base ────────────────────────────────── */
 .glass-card {
-  background:rgba(38, 32, 39, 0.664);
+  background: #181818e7;
   width: 100%;
   /* height убрали, чтобы карточка росла только по содержимому */
-  border: 1px solid #000;
-  backdrop-filter: blur(7px);
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgb(196, 196, 196);
   border-radius: 12px;
   padding: 1rem 0.0rem;
   font-family: 'JetBrains Mono', monospace;

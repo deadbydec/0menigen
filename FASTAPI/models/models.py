@@ -10,19 +10,14 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import Enum as SqlEnum
 from database import async_session, Base  # ✅ Теперь используется правильный sessionmaker!
 from sqlalchemy.ext.mutable import MutableList
-
-
+from sqlalchemy.sql import expression
 
 # Асинхронный движок базы данных
 engine = create_async_engine(Config.DATABASE_URL, echo=True, future=True)
-
 # Фабрика сессий
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
 # Базовый класс моделей
-
 UTC = timezone.utc
-
 
 class VipStatus(str, enum.Enum):
     NONE = "none"
@@ -266,6 +261,7 @@ class Race(Base):
     id = Column(Integer, primary_key=True)
     code = Column(String(50), unique=True, nullable=False)
     image_url = Column(String, nullable=True)
+    triggers = Column(JSON, default={})
     display_name = Column(String(100), nullable=False)
     vibe = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
@@ -554,6 +550,7 @@ class Product(Base):
     product_type = Column(SqlEnum(ProductType, name="product_type"), nullable=False, default=ProductType.drink)
     stock = Column(Integer, nullable=False, default=1)
     custom = Column(JSON, default=dict)
+    non_tradeable = Column(Boolean, default=False)
     is_nulling_only = Column(Boolean, default=False)  # 🔥 Только за нуллинги
     nulling_price = Column(Float, default=0.0)  # Цена в нуллингах, если is_nulling_only=True
 
@@ -577,6 +574,8 @@ class InventoryItem(Base):
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False, index=True)
     quantity = Column(Integer, default=1)
     created_at = Column(DateTime, server_default=func.now())  # 🔥 Добавлено время получения предмета
+    state = Column(String, default="normal")  # normal | auction | safe | incubating | locked
+    inventory_capacity = Column(Integer, default=40)  # например, базово 40 слотов
 
     product = relationship('Product', back_populates='items')
     user = relationship("User", backref="inventory")
@@ -590,8 +589,81 @@ class InventoryItem(Base):
 
 
     def is_locked(self):
-        return self.incubation is not None and not self.incubation.is_hatched
+        return (
+        self.locked  # 🔒 ручная блокировка (например, в сейфе или на аукционе)
+        or (self.incubation is not None and not self.incubation.is_hatched)  # 🐣 инкубация
+    )
 
+    def has_free_inventory_slot(self):
+        active_items = [i for i in self.inventory if i.state == "normal"]
+        return len(active_items) < self.inventory_capacity
+
+    @property
+    def inventory_capacity(self):
+        base = 40
+        upgrades = sum(up.amount for up in self.inventory_upgrades)
+        return base + upgrades
+
+
+
+class TradePost(Base):
+    __tablename__ = "trade_posts"
+
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(Integer, ForeignKey("user.id"))
+    items = Column(JSON)  # [{type: "item", id: 22}, {type: "pet", id: 9}]
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    expires_at = Column(DateTime)
+    is_active = Column(Boolean, default=True)
+
+    owner = relationship("User", backref="trade_posts")
+
+
+
+class TradeOffer(Base):
+    __tablename__ = "trade_offers"
+
+    id = Column(Integer, primary_key=True)
+    trade_post_id = Column(Integer, ForeignKey("trade_posts.id"))
+    offerer_id = Column(Integer, ForeignKey("user.id"))
+    offered_items = Column(JSON)  # [{type: "item", id: 88}, {type: "coins", amount: 2000}]
+    status = Column(String, default="pending")  # pending / accepted / rejected
+    created_at = Column(DateTime(timezone=True), default=func.now())
+
+    offerer = relationship("User", backref="trade_offers")
+
+
+class AuctionLot(Base):
+    __tablename__ = "auction_lots"
+
+    id               = Column(Integer, primary_key=True)
+    owner_id         = Column(Integer, ForeignKey("user.id"))
+    item_type        = Column(String(10), nullable=False)  # "item" / "pet"
+    item_id          = Column(Integer, nullable=False)     # InventoryItem.id или Pet.id
+    currency         = Column(String(10), nullable=False)  # "coins" / "nullings"
+
+    starting_price   = Column(Numeric, nullable=False)
+    current_bid      = Column(Numeric, default=0)
+    highest_bidder_id= Column(Integer, ForeignKey("user.id"), nullable=True)
+
+    created_at       = Column(DateTime(timezone=True), default=func.now())
+    expires_at       = Column(DateTime(timezone=True), nullable=False)
+    is_active        = Column(Boolean, default=True, index=True)
+
+    owner = relationship("User", foreign_keys=[owner_id], backref="auction_lots")
+    highest_bidder = relationship("User", foreign_keys=[highest_bidder_id], backref="auction_bids_won")
+
+
+
+class AuctionBid(Base):
+    __tablename__ = "auction_bids"
+    id            = Column(Integer, primary_key=True)
+    auction_id    = Column(Integer, ForeignKey("auction_lots.id", ondelete="CASCADE"))
+    bidder_id     = Column(Integer, ForeignKey("user.id"))
+    amount = Column(Numeric(10, 2), nullable=False)
+    created_at    = Column(DateTime(timezone=True), default=func.now())
+
+    bidder = relationship("User", backref="auction_bids")
 
 
 
@@ -979,12 +1051,15 @@ class Pet(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), index=True)
+    species_code = Column(String(50), nullable=False)
     image = Column(String(255), nullable=True)
     name = Column(String(100), default="Unnamed")
     birthdate = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     race_code = Column(String(50))
     level = Column(Integer, default=1)
+    state = Column(String, default="normal")
     intelligence = Column(Integer, default=0)
+    read_books = Column(JSONB, nullable=False, server_default=expression.text("'[]'::jsonb"))
     fullness = Column(Integer, default=50)
     energy = Column(Integer, default=100)
     health = Column(Integer, default=100)
@@ -1017,6 +1092,10 @@ class Pet(Base):
     appearance = relationship("PetAppearance", back_populates="pet", cascade="all, delete-orphan")
     user = relationship("User", back_populates="pets")
     companion = relationship("Product", uselist=False)  # доступ к Product напрямую
+
+def has_read(pet, book_id: str) -> bool:
+    return book_id in (pet.read_books or [])
+
 
 
 class Incubation(Base):

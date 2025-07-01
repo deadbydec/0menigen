@@ -6,7 +6,7 @@
 
 <style scoped lang="scss">
   footer {
-    background:linear-gradient(50deg, rgb(24, 24, 24), rgb(2, 85, 81),rgb(5, 235, 196));
+    background:linear-gradient(90deg, rgba(14, 224, 214, 0.116), rgba(24, 24, 24, 0.904),  rgba(24, 24, 24, 0.904),rgba(5, 235, 197, 0.13));
     color: white;
     border: 1px solid #d1d1d1cc;
     padding: 3px 0;

@@ -1,9 +1,12 @@
 <template>
+  <div>
+  <button class="close-btn" @click="$emit('close')">×</button>
     <div ref="phaserContainer" class="match3-wrapper"></div>
     <!-- Кнопка сохранения -->
     <div class="score-actions">
       <button @click="saveResult" class="save-btn">Сохранить результат</button>
     </div>
+  </div>
   </template>
   
   <script setup>
@@ -399,16 +402,28 @@
   </script>
   
   <style scoped>
+
+.close-btn {
+  position: absolute;
+  top: 1px;
+  right: -90px;
+  font-size: 24px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  z-index: 10;
+}
+
   .match3-wrapper {
+    margin-top: 50px;
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 40px;
-    height: 90vh;
   }
   
   .score-actions {
-    margin-top: 12px;
+    margin-top: 20px;
   }
   
   .save-btn {

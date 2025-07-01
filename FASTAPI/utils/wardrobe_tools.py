@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import json
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,7 +6,6 @@ from sqlalchemy.orm import joinedload
 from fastapi import HTTPException
 from models.models import PetRenderConfig, Pet  # не забудь импорт
 from constants.wardrobe import AVATAR_SLOTS
-
 
 async def build_avatar_layers(
     pet_id: int,
@@ -90,8 +88,6 @@ async def build_avatar_layers(
 
     return sorted(layers, key=lambda l: l["z"])
 
-
-
 from utils.slot_utils import get_enum_slot
 from models.models import (
     InventoryItem,
@@ -100,8 +96,6 @@ from models.models import (
     UserPetWardrobeItem,
     WardrobeSlot,
 )
-
-
 async def detect_slot(product: Product) -> WardrobeSlot:
     SLOT_MAP = {
         "background": "фон", "aura": "окружение", "companion": "спутник",
@@ -122,18 +116,11 @@ async def detect_slot(product: Product) -> WardrobeSlot:
     except ValueError:
         return WardrobeSlot.accessory
 
-
-# ────────────────────────────────────────────────────────────
 async def move_to_wardrobe(           # ← только ОДИН экземпляр
     db:   AsyncSession,
     user,                             # current user (модель User)
     item_id: int                      # InventoryItem.id
 ) -> None:
-    """
-    Перемещает ОДИН конкретный `InventoryItem`
-    → создаёт НОВУЮ запись `UserPetWardrobeItem`
-    с `quantity = 1` и уникальным `wardrobe_id`.
-    """
 
     # 1 ▸ находим предмет в инвентаре
     item: InventoryItem | None = (
@@ -188,16 +175,12 @@ async def move_to_wardrobe(           # ← только ОДИН экземпл
         f"(slot={slot.value}, wardrobe_id={wardrobe_entry.id})"
     )
 
-
-# ────────────────────────────────────────────
 async def move_from_wardrobe(
     db: AsyncSession,
     user,
     wardrobe_id: int
 ) -> None:
-    """
-    Возвращает один конкретный экземпляр из гардероба в инвентарь.
-    """
+
     entry: UserPetWardrobeItem | None = (
         await db.execute(
             select(UserPetWardrobeItem)
@@ -231,17 +214,10 @@ async def move_from_wardrobe(
 
     print(f"[WARDROBE] -1 «{product.name}» (wardrobe_id={wardrobe_id}) → инвентарь")
 
-
-
-# ────────────────────────────────────────────
 async def serialize_wardrobe(
     db: AsyncSession,
     user_id: int
 ) -> list[dict]:
-    """
-    Возвращает **каждую копию** предмета гардероба отдельным элементом.
-    Поле `quantity` остаётся (всегда 1), но больше не влияет на фронт.
-    """
 
     rows = (
         await db.execute(
@@ -294,8 +270,6 @@ async def serialize_wardrobe(
         out.append(item)
 
     return out
-
-# ────────────────────────────────────────────
 
 
 

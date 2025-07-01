@@ -1,8 +1,3 @@
-"""Ωmenigen · routes/wardrobe.py — атомарная версия
-====================================================
-Все операции работают с УНИКАЛЬНЫМИ экземплярами.
-`quantity` не используется: одна запись = один предмет.
-"""
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,9 +12,6 @@ from utils.wardrobe_tools import (
 
 router = APIRouter(prefix="/api/wardrobe", tags=["wardrobe"])
 
-# ─────────────────────────────────────────────
-#  GET /api/wardrobe  —  содержимое гардероба
-# ─────────────────────────────────────────────
 @router.get("/", summary="Получить гардероб")
 async def get_wardrobe(
     user = Depends(get_current_user_from_cookie),
@@ -30,28 +22,13 @@ async def get_wardrobe(
     return await serialize_wardrobe(db, user.id)
 
 
-# ─────────────────────────────────────────────
-#  POST /api/wardrobe/add  —  из инвентаря → гардероб
-# { "item_id": 123 }
-# ─────────────────────────────────────────────
-# routes/wardrobe.py
-# ................................
-
-# ─────────────────────────────────────────────
-#  POST /api/wardrobe/add   —  инвентарь → гардероб
-#  payload: { "item_id": <InventoryItem.id> }
-# ─────────────────────────────────────────────
 @router.post("/add", summary="Убрать предмет из инвентаря в гардероб")
 async def add_to_wardrobe(
     payload: dict,
     user      = Depends(get_current_user_from_cookie),
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Перемещает **конкретный экземпляр** из user_inventory в user_pet_wardrobe_items.
 
-    * `item_id` — это **InventoryItem.id** (не wardrobe_id, не product_id!).
-    """
     if not user:
         raise HTTPException(401, "Не авторизован")
 
@@ -66,14 +43,6 @@ async def add_to_wardrobe(
     # отдаём свежее содержимое гардероба
     return await serialize_wardrobe(db, user.id)
 
-
-
-
-
-# ─────────────────────────────────────────────
-#  POST /api/wardrobe/remove  —  из гардероба → инвентарь
-# { "wardrobe_id": 55 }
-# ─────────────────────────────────────────────
 @router.post("/remove", summary="Вернуть предмет из гардероба")
 async def remove_from_wardrobe(
     payload: dict,

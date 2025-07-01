@@ -830,7 +830,7 @@
   "rarity": "common",
   "price": 120,
   "product_type": "cosmetic",
-  "image": "panel_void_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "background",
     "image": "background_slot/panel_void_bg.png",
@@ -934,7 +934,7 @@
   "rarity": "epic",
   "price": 1150,
   "product_type": "cosmetic",
-  "image": "halloween_dusk_orb.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "background",
     "image": "background_slot/halloween_dusk_bg.png",
@@ -948,7 +948,7 @@
   "price": 880,
   "rarity": "epic",
   "product_type": "cosmetic",
-  "image": "broken_dawn_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "dye",
     "z": 4,
@@ -996,7 +996,7 @@
   "rarity": "epic",
   "price": 1350,
   "product_type": "cosmetic",
-  "image": "dye_iced_bones_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "dye",
     "z": 4,
@@ -1008,23 +1008,19 @@
 
 
 
-
-      {
+   {
+  
   "id": 500,
   "name": "Яйцо Бонектры",
-  "description": "Холодное и тяжёлое, будто его вырезали из позвоночника древнего существа. Оно не пульсирует — оно наблюдает. Кажется, внутри кто-то знает твоё имя.",
   "price": 1300,
+  "description": "Холодное, будто вынутое из старого склепа. Иногда кажется, что изнутри доносится тихий вой.",
   "image": "bonektra_egg.png",
-  "rarity": "rare",
   "product_type": "creature",
-  "custom": {
+  "rarity": "rare",
+  "custom":{
     "race_code": "bonektra",
-    "spawn_variants": [
-      "bonektra_wolf.png"
-    ],
-    "trait_pool": ["ancient", "silent", "resilient"],
     "incubation_time_range": [2, 5]
-  }
+}
 },
 {
   "id": 501,
@@ -1036,10 +1032,6 @@
   "product_type": "creature",
   "custom": {
     "race_code": "dyrchiq",
-    "spawn_variants": [
-      "dyrchiq_parrot.png"
-    ],
-    "trait_pool": ["chaotic", "playful", "unstable"],
     "incubation_time_range": [2, 5]
   }
 },
@@ -1053,10 +1045,6 @@
   "product_type": "creature",
   "custom": {
     "race_code": "zharnull",
-    "spawn_variants": [
-      "zharnull_phoenix.png"
-    ],
-    "trait_pool": ["radiant", "reborn", "obsidian"],
     "incubation_time_range": [2, 5]
   }
 },
@@ -1070,11 +1058,22 @@
   "product_type": "creature",
   "custom": {
     "race_code": "hexaplasm",
-    "spawn_variants": [
-      "hexaplasm_base.png"
-    ],
-    "trait_pool": ["glitched", "calculating", "predator"],
     "incubation_time_range": [3, 6]
+  }
+},
+{
+  "id": 511,
+  "name": "Мистическое яйцо",
+  "description": "Пульсирующее яйцо, внутри которого что-то пытается стать живым.",
+  "rarity": "glitched",
+  "product_type": "creature",
+  "price": 0,
+  "nulling_price": 25,
+  "image": "mysterious_egg.png",
+  "stackable": false,
+  "non_tradeable": true,
+  "custom": {
+    "incubation_time_range": [2, 5]
   }
 },
 {
@@ -1107,20 +1106,16 @@
 },
 {
   "id": 552,
-  "name": "Кариссэя",
+  "name": "Медальон Кариссэи",
   "description": "Те, кто видел её косу — забывали имена своих прежних спутников. Потому что с ней ты либо умираешь красиво, либо больше не идёшь ни с кем.",
   "price": 0,
   "rarity": "glitched",
   "product_type": "cosmetic",
-  "image": "broken_dawn_dye.png",
+  "image": "karisseia_icon.png",
   "custom": {
     "slot": "companion",
-    "image": "karisseia.png",
-    "z": 5,
-    "render_variants": {
-    "zharnull": "companion_slot/karisseia_render.png"
-    
-  }
+    "image": "companion_slot/karisseia_render.png",
+    "z": 5
 }
 },
 {
@@ -1131,7 +1126,7 @@
   "rarity": "glitched",
   "price": 0,
   "product_type": "cosmetic",
-  "image": "marchlor_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "companion",
     "image": "companion_slot/marchlor_render.png",
@@ -1145,7 +1140,7 @@
   "price": 0,
   "rarity": "glitched",
   "product_type": "cosmetic",
-  "image": "psy_cortex.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "companion",
     "image": "companion_slot/psy_cortex.png",
@@ -1159,7 +1154,7 @@
   "price": 0,
   "rarity": "special",
   "product_type": "cosmetic",
-  "image": "echo_cortex.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "companion",
     "image": "companion_slot/echo_cortex.png",
@@ -1174,7 +1169,7 @@
   "rarity": "glitched",
   "price": 0,
   "product_type": "cosmetic",
-  "image": "fluan_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "companion",
     "image": "companion_slot/fluan_render.png",
@@ -1189,7 +1184,7 @@
   "rarity": "special",
   "price": 0,
   "product_type": "cosmetic",
-  "image": "madam_porchalo_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "companion",
     "image": "companion_slot/madam_porchalo_render.png",
@@ -1205,7 +1200,7 @@
   "rarity": "glitched",
   "price": 0,
   "product_type": "cosmetic",
-  "image": "dinoforix_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "companion",
     "image": "companion_slot/dinoforix_render.png",
@@ -1220,7 +1215,7 @@
   "rarity": "special",
   "price": 0,
   "product_type": "cosmetic",
-  "image": "karmik_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "companion",
     "image": "companion_slot/karmik_render.png",
@@ -1236,25 +1231,13 @@
   "rarity": "prize",
   "price": 0,
   "product_type": "cosmetic",
-  "image": "nightglim_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "companion",
     "image": "companion_slot/nightglim_render.png",
     "z": 5
   }
 },
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 {
@@ -1265,7 +1248,7 @@
   "rarity": "epic",
   "price": 920,
   "product_type": "cosmetic",
-  "image": "bloody_glow_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "aura",
     "z": 2,
@@ -1283,7 +1266,7 @@
   "rarity": "legendary",
   "price": 11059,
   "product_type": "cosmetic",
-  "image": "white_glow_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "aura",
     "z": 2,
@@ -1304,10 +1287,7 @@
   "custom": {
     "slot": "aura",
     "z": 6,
-    "render_variants": {
-      "zharnull": "aura_slot/butterfly_swarm_zharnull.png",
-      "bonektra": "aura_slot/butterfly_swarm_bonektra.png"
-    }
+    "image": "aura_slot/butterfly_swarm_zharnull.png"  
   }
 },
 {
@@ -1318,7 +1298,7 @@
   "rarity": "void",
   "price": 0,
   "product_type": "cosmetic",
-  "image": "void_glow_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "aura",
     "z": 2,
@@ -1339,10 +1319,8 @@
   "custom": {
     "slot": "aura",
     "z": 6,
-    "render_variants": {
-      "zharnull": "aura_slot/butterfly_swarm_zharnull.png",
-      "bonektra": "aura_slot/forest_butterfly_swarm_bonektra.png"
-    }
+    "image": "aura_slot/butterfly_swarm_zharnull.png"
+    
   }
 },
 {
@@ -1353,7 +1331,7 @@
   "rarity": "rare",
   "price": 920,
   "product_type": "cosmetic",
-  "image": "green_glow_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "aura",
     "z": 2,
@@ -1371,7 +1349,7 @@
   "rarity": "glitched",
   "price": 0,
   "product_type": "cosmetic",
-  "image": "glitch_glow_icon.png",
+  "image": "noimage.png",
   "custom": {
     "slot": "aura",
     "z": 2,
@@ -1381,13 +1359,6 @@
     }
   }
 },
-
-
-
-
-
-
-
 
 
 
@@ -1408,7 +1379,6 @@
 
 
 
-
     {
         "id": 1999,
         "name": "Потрёпанная памятка новичку",
@@ -1416,7 +1386,14 @@
         "price": 0,
         "image": "newbee_guid.png",
         "rarity": "special",
-        "product_type": "book"
+        "product_type": "book",
+        "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "newbee_guid",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
     },
     {
         "id": 2000,
@@ -1425,7 +1402,14 @@
         "price": 350,
         "image": "my_python.png",
         "rarity": "common",
-        "product_type": "book"
+        "product_type": "book",
+        "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "my_python",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
     },
     {
         "id": 2001,
@@ -1434,7 +1418,14 @@
         "price": 420,
         "image": "noimage.png",
         "rarity": "legendary",
-        "product_type": "book"
+        "product_type": "book",
+        "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "annihilation_manual",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
     },
     {
         "id": 2002,
@@ -1443,7 +1434,14 @@
         "price": 256,
         "image": "triptix.png",
         "rarity": "trash",
-        "product_type": "book"
+        "product_type": "book",
+        "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "triptix",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
     },
     {
         "id": 2003,
@@ -1452,7 +1450,14 @@
         "price": 616,
         "image": "vsc_house.png",
         "rarity": "epic",
-        "product_type": "book"
+        "product_type": "book",
+        "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "vsc_house",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
     },
     {
         "id": 2004,
@@ -1461,7 +1466,14 @@
         "price": 100,
         "image": "pc_vs_console.png",
         "rarity": "trash",
-        "product_type": "book"
+        "product_type": "book",
+        "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "pc_vs_console",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
     },
     {
         "id": 2005,
@@ -1470,7 +1482,14 @@
         "price": 250,
         "image": "leprarium.png",
         "rarity": "legendary",
-        "product_type": "book"
+        "product_type": "book",
+        "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "leprarium",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
     },
     {
         "id": 2006,
@@ -1479,7 +1498,14 @@
         "price": 590,
         "image": "believed_in_ghosts.png",
         "rarity": "epic",
-        "product_type": "book"
+        "product_type": "book",
+        "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "believed_in_ghosts",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
     },
     {
   "id": 2007,
@@ -1488,7 +1514,14 @@
   "price": 888,
   "image": "fae_failbook.png",
   "rarity": "epic",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "fae_failbook",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 }
 ,
     {
@@ -1498,25 +1531,31 @@
         "price": 919,
         "image": "pozdno_icon.png",
         "rarity": "epic",
-        "product_type": "book"
-    },
-        {
-        "id": 2009,
-        "name": "ПОЗДНО",
-        "description": "Некоторые буквы тут орут. Остальные молчат, как ты.",
-        "price": 919,
-        "image": "pozdno_icon.png",
-        "rarity": "epic",
-        "product_type": "book"
-    },
-    {
+        "product_type": "book",
+        "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "pozdno_icon",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
+}
+,{
         "id": 2010,
         "name": "Мшарник",
         "description": "Старый дневник, покрытый настоящим мхом. Почерк неразборчив, страницы влажные. Иногда пахнет дождём.",
         "price": 42,
         "image": "msharnik_book.png",
         "rarity": "common",
-        "product_type": "book"
+        "product_type": "book",
+        "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "msharnik_book",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
+
     },
     {
   "id": 2011,
@@ -1525,7 +1564,14 @@
   "price": 273,
   "image": "lightbook_stupidguide.png",
   "rarity": "rare",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "lightbook_stupidguide",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2012,
@@ -1534,7 +1580,14 @@
   "price": 213,
   "image": "placebo_book.png",
   "rarity": "common",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "placebo_book",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2013,
@@ -1543,7 +1596,14 @@
   "price": 466,
   "image": "eye_of_shame.png",
   "rarity": "epic",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "eye_of_shame",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2014,
@@ -1552,7 +1612,14 @@
   "price": 69,
   "image": "zhallobnaya_book.png",
   "rarity": "trash",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "zhallobnaya_book",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2015,
@@ -1561,7 +1628,14 @@
   "price": 1444,
   "image": "fenixologika_book.png",
   "rarity": "elder",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "fenixologika",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2016,
@@ -1570,7 +1644,14 @@
   "price": 199,
   "image": "coffeebiblia_book.png",
   "rarity": "epic",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "coffeebiblia",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2017,
@@ -1579,7 +1660,14 @@
   "price": 333,
   "image": "ogrromance_book.png",
   "rarity": "rare",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "ogrromance",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2018,
@@ -1588,7 +1676,14 @@
   "price": 1001,
   "image": "kafka_nothing_book.png",
   "rarity": "rare",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "kafka_nothing",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2019,
@@ -1597,7 +1692,14 @@
   "price": 1410,
   "image": "aillion_logbook.png",
   "rarity": "epic",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "aillion_log",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2020,
@@ -1606,7 +1708,14 @@
   "price": 1313,
   "image": "whispers_of_shadow_book.png",
   "rarity": "epic",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "whispers_of_shadow",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2021,
@@ -1615,7 +1724,15 @@
   "price": 1000,
   "image": "etiquette_marm_book.png",
   "rarity": "legendary",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "etiquette_marm",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
+
 },
 {
   "id": 2022,
@@ -1624,7 +1741,14 @@
   "price": 111,
   "image": "glycine_book.png",
   "rarity": "common",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "glycine_book",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2023,
@@ -1633,7 +1757,15 @@
   "price": 666,
   "image": "burning_beautiful_book.png",
   "rarity": "rare",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "burning_beautiful",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
+
 },
 {
   "id": 2024,
@@ -1642,7 +1774,14 @@
   "price": 696,
   "image": "trusobook.png",
   "rarity": "rare",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "trusobook",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2025,
@@ -1651,7 +1790,15 @@
   "price": 1312,
   "image": "centipede_book.png",
   "rarity": "legendary",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "centipede_book",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
+
 },
 {
   "id": 2026,
@@ -1660,7 +1807,15 @@
   "price": 49,
   "image": "paw_notebook.png",
   "rarity": "common",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "paw_notebook",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
+
 },
 {
   "id": 2027,
@@ -1669,7 +1824,14 @@
   "price": 233,
   "image": "lavender_book.png",
   "rarity": "rare",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "lavender_goodbye",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2028,
@@ -1678,7 +1840,14 @@
   "price": 108,
   "image": "fish_logbook.png",
   "rarity": "common",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "fish_logbook",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2029,
@@ -1687,7 +1856,15 @@
   "price": 219,
   "image": "adhd_diary_book.png",
   "rarity": "common",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "adhd_diary",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
+
 },
 {
   "id": 2030,
@@ -1696,7 +1873,14 @@
   "price": 777,
   "image": "skeleton_diary.png",
   "rarity": "epic",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "skeleton_diary",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2031,
@@ -1705,7 +1889,14 @@
   "price": 1444,
   "image": "origin_book.png",
   "rarity": "elder",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "origin_book",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
 },
 {
   "id": 2032,
@@ -1714,7 +1905,15 @@
   "price": 420,
   "image": "parrot_feather_book.png",
   "rarity": "rare",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "parrot_feather",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+}
+
 },
 {
   "id": 2033,
@@ -1725,9 +1924,12 @@
   "rarity": "rare",
   "product_type": "book",
   "custom": {
-    "funny_effect": "distorted_voice",
-    "book_pages": 6
+  "effect": "grant_stat_once",
+  "unique_read_id": "screaming_book",
+  "stat_bonus": {
+    "intelligence": 1
   }
+}
 },
 {
   "id": 2034,
@@ -1738,8 +1940,13 @@
   "rarity": "rare",
   "product_type": "book",
   "custom": {
-    "book_pages": 0,
-    "funny_effect": "silence_blossom"
+  "effect": "grant_stat_once",
+  "unique_read_id": "chained_blossom",
+  "stat_bonus": {
+    "intelligence": 1
+  }
+    
+
   }
 },
 {
@@ -1749,7 +1956,14 @@
   "price": 607,
   "image": "winddeck_logbook.png",
   "rarity": "rare",
-  "product_type": "book"
+  "product_type": "book",
+  "custom": {
+  "effect": "grant_stat_once",
+  "unique_read_id": "cwinddeck_logbook",
+  "stat_bonus": {
+    "intelligence": 1
+    }
+  }
 },
 
 
@@ -1926,7 +2140,125 @@
     "required_trash_amount": 1000,
     "drop_chance": 15
   }
+},
+
+
+{
+  "id": 3000,
+  "name": "Свиток Переименования",
+  "description": "глюкнутый артефакт эпохи консольной эзотерики. стирает старое имя, будто его и не было. но только один раз — иначе слетит связь с реальностью.",
+  "price": 0,
+  "types": ["artifact", "book"],
+  "rarity": "glitched",
+  "product_type": "artifact",
+  "nulling_price": 15,
+  "is_nulling_only": true,
+  "image": "oblivion_scroll.png",
+  "custom": {
+    "effect": "rename_pet_once",
+    "usage": "Позволяет один раз переименовать одного питомца. После применения свиток исчезает.",
+    "target": "pet",
+    "consume_on_use": true
+  }
 }
+,
+
+{
+  "id": 3001,
+  "name": "Свиток Обнуления",
+  "description": "артефакт из периода нулевой миграции. стирает твое имя везде, даже из памяти симуляции. одноразовый, как вздох перед перерождением.",
+  "price": 0,
+  "types": ["artifact", "book"],
+  "rarity": "glitched",
+  "product_type": "artifact",
+  "nulling_price": 30,
+  "is_nulling_only": true,
+  "image": "player_oblivion_scroll.png",
+  "custom": {
+    "effect": "rename_player_once",
+    "usage": "Позволяет один раз изменить имя игрока. После использования предмет исчезает.",
+    "target": "player",
+    "consume_on_use": true
+  }
+},
+{
+  "id": 3002,
+  "name": "Окклюзия Жизни",
+  "description": "застывшая пустотная плазма, вобравшая в себя остаточную энергию чёрной дыры. симуляция не допускает подобного искажения, но ты — исключение. активируя её, ты пробуждаешь возможность завести ещё одну форму жизни в своём пространстве.",
+  "price": 0,
+  "types": ["artifact"],
+  "rarity": "glitched",
+  "product_type": "artifact",
+  "nulling_price": 45,
+  "is_nulling_only": true,
+  "image": "one_more_slot.png",
+  "custom": {
+    "effect": "expand_pet_slots_once",
+    "usage": "Увеличивает лимит питомцев на аккаунте на 1. Позволяет выйти за границы допустимого.",
+    "target": "player",
+    "consume_on_use": true
+  }
+},
+{
+  "id": 3003,
+  "name": "Бронзовый Кинжал Торга",
+  "description": "Стоит прямо в магазине вынуть из кармана эту вещицу, как цены таят на глазах... — но всего на 5%.",
+  "price": 0,
+  "types": ["artifact", "coupon"],
+  "rarity": "glitched",
+  "product_type": "artifact",
+  "nulling_price": 5,
+  "is_nulling_only": true,
+  "image": "dagger_discount_5.png",
+  "custom": {
+    "effect": "activate_discount",
+    "target": "player",
+    "consume_on_use": true,
+    "discount_percent": 5,
+    "duration_days": 30
+  }
+},
+{
+  "id": 3004,
+  "name": "Серебряный Кинжал Торга",
+  "description": "Этот блестящий кинжал — не оружие, а инструмент торговли. Достаёшь — и цены на 10% ниже. Маги-торговцы ненавидят тебя.",
+  "price": 0,
+  "types": ["artifact", "coupon"],
+  "rarity": "glitched",
+  "product_type": "artifact",
+  "nulling_price": 10,
+  "is_nulling_only": true,
+  "image": "dagger_discount_10.png",
+  "custom": {
+    "effect": "activate_discount",
+    "target": "player",
+    "consume_on_use": true,
+    "discount_percent": 10,
+    "duration_days": 30
+  }
+},
+{
+  "id": 3005,
+  "name": "Золотой Кинжал Торга",
+  "description": "Говорят, этот артефакт был выкован на Чёрном Базаре самим Торгом. Если показать его на кассе — срезается 15% от всего. Но только на месяц. Потом он исчезает, как твои накопления.",
+  "price": 0,
+  "types": ["artifact", "coupon"],
+  "rarity": "glitched",
+  "product_type": "artifact",
+  "nulling_price": 15,
+  "is_nulling_only": true,
+  "image": "dagger_discount_15.png",
+  "custom": {
+    "effect": "activate_discount",
+    "target": "player",
+    "consume_on_use": true,
+    "discount_percent": 15,
+    "duration_days": 30
+  }
+}
+
+
+
 
 
 

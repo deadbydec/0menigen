@@ -308,7 +308,7 @@ watchEffect(() => {
 
   input {
     flex: 1;
-    background: linear-gradient(90deg, #1df0c615, #00585118);
+    background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 6px;
     padding: 6px 3px;
